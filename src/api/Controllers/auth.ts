@@ -1,0 +1,128 @@
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import {
+  changeUserPassword,
+  loginUser,
+  registerUser,
+} from "../../Services/auth";
+import prisma from "../../Config/prisma";
+import { sendEmail } from "../../Services/mail";
+import { REFRESH_TOKEN_SECRET } from "../../Config";
+import { generateAccessToken } from "../../Utils/generateToken";
+
+export const viewLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, password } = req.body;
+    const user = await loginUser(email, password);
+
+    return res.status(200).json({ message: "Logged In, ", user });
+  } catch (error) {
+    next(error);
+  }
+};
+export const viewRegister = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { fullName, email, phone } = req.body;
+    const tempPassword = Math.random().toString(36).slice(-8);
+
+    await registerUser(email, fullName, tempPassword, phone);
+    sendEmail(email, fullName, tempPassword);
+    return res.status(200).json({
+      message: "User created successfully. Login credentials sent via email.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const viewProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = (req as any).user;
+    const existingUser = await prisma.user.findUnique({
+      select: {
+        fullName: true,
+        email: true,
+        phone: true,
+        UserPermissions: true,
+        GroupMember: true,
+        refreshToken: true,
+      },
+      where: { id: user.id },
+    });
+
+    res.status(200).json({ message: "Profile Retrieved", existingUser });
+  } catch (error) {
+    next(error);
+  }
+};
+export const changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    const cUser = await changeUserPassword(
+      userId,
+      oldPassword,
+      newPassword,
+      confirmPassword
+    );
+
+    return res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+export const viewRefreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({ message: "Refresh token is required" });
+  }
+
+  try {
+    const payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET as string);
+
+    if (typeof payload === "string" || !payload.userId) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const accessToken = generateAccessToken(user.email);
+
+    res.status(200).json({ accessToken });
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(440).json({ message: "Refresh token has expired" });
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ message: "Invalid refresh token" });
+    } else {
+      res.status(500).json({ message: "An unknown error occurred" });
+    }
+  }
+};
