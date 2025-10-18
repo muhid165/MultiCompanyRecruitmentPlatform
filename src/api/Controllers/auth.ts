@@ -48,8 +48,8 @@ export const viewProfile = async (
   next: NextFunction
 ) => {
   try {
-    const user = (req as any).user;
-    const existingUser = await prisma.user.findUnique({
+    const userId = (req as any).user.id;
+    const user = await prisma.user.findUnique({
       select: {
         fullName: true,
         email: true,
@@ -57,11 +57,15 @@ export const viewProfile = async (
         UserPermissions: true,
         GroupMember: true,
         refreshToken: true,
+        companyId:true,
+        Role: {
+          select: { code: true },
+        },
       },
-      where: { id: user.id },
+      where: { id: userId },
     });
 
-    res.status(200).json({ message: "Profile Retrieved", existingUser });
+    res.status(200).json({ message: "Profile Retrieved", user });
   } catch (error) {
     next(error);
   }

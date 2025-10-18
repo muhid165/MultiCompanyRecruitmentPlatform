@@ -27,10 +27,10 @@ router.get("/", isAuthenticated, viewRoles);
 // Get role by ID
 router.get("/:id", isAuthenticated, viewRoleById);
 
-// Bulk delete roles (soft)
+// Bulk delete roles 
 router.delete("/bulk", isAuthenticated, validate(bulkDeleteSchema), viewDeleteBulkRoles);
 
-// Delete single role (soft)
+// Delete single role 
 router.delete("/:id", isAuthenticated, viewDeleteRole);
 
 // Import roles

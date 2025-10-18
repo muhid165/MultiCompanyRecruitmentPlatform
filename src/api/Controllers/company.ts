@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
+import strict from "assert/strict";
+import { string } from "zod";
 
 //COMPANY
 export const viewAllCompanies = async (
@@ -8,13 +10,25 @@ export const viewAllCompanies = async (
   next: NextFunction
 ) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
     const companies = await prisma.company.findMany({
       where: {
         isDeleted: false,
       },
+      skip,
+      take: limit,
     });
-
+    const total = await prisma.company.count({ where: { isDeleted: false } });
+    if (total <= 0)
+      return res.status(404).json({
+        message: "No Company found",
+      });
     return res.status(200).json({
+      page,
+      tatalPages: Math.ceil(total / limit),
+      totalItems: total,
       companies,
     });
   } catch (error) {
@@ -150,115 +164,23 @@ export const viewCompanyById = async (
     next(error);
   }
 };
-export const viewCompanyDepartment = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params; // companyId
-    const departments = await prisma.department.findMany({
-      select: { companyId: true, name: true, description: true },
-      where: { companyId: id },
-    });
-
-    return res
-      .status(200)
-      .json({ message: "Company departments", departments });
-  } catch (error) {
-    next(error);
-  }
-};
-export const viewCompanyJobs = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params; // companyId
-    const jobs = await prisma.job.findMany({
-      select: {
-        companyId: true,
-        departmentId: true,
-        title: true,
-        location: true,
-        experience: true,
-        salaryRange: true,
-        employmentType: true,
-        description: true,
-        responsibilities: true,
-        requirements: true,
-        createdById: true,
-        published: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      where: {
-        companyId: id,
-      },
-    });
-
-    return res.status(200).json({ message: "Company Jobs ", jobs });
-  } catch (error) {
-    next(error);
-  }
-};
-export const viewCompanyApplications = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = req.params; // companyid
-    const applications = await prisma.application.findMany({
-      select: {
-        jobId: true,
-        companyId: true,
-        candidateName: true,
-        email: true,
-        phone: true,
-        resumeUrl: true,
-        experience: true,
-        skills: true,
-        currentCTC: true,
-        expectedCTC: true,
-        noticePeriod: true,
-        status: true,
-        source: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      where: {
-        companyId: id,
-      },
-    });
-
-    return res
-      .status(200)
-      .json({ message: "company applications", applications });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const assingCompanyAdmins = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
+    const { companyId } = req.query;
     const { roleId, adminIds } = req.body;
 
     const company = await prisma.company.findUnique({
-      where: { id: companyId },
+      where: { id: companyId as string },
     });
     if (!company) return res.status(404).json({ message: "Company not found" });
 
     await prisma.user.updateMany({
       where: { id: { in: adminIds } },
-      data: { companyId, roleId },
+      data: { companyId: companyId as string, roleId },
     });
 
     res.status(200).json({ message: "Company admins assigned successfully" });
@@ -266,3 +188,57 @@ export const assingCompanyAdmins = async (
     next(error);
   }
 };
+// const viewCompanyDepartment = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { id } = req.params; // companyId
+//     const departments = await prisma.department.findMany({
+//       select: { companyId: true, name: true, description: true },
+//       where: { companyId: id },
+//     });
+
+//     return res
+//       .status(200)
+//       .json({ message: "Company departments", departments });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+// const viewCompanyJobs = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { id } = req.params; // companyId
+//     const jobs = await prisma.job.findMany({
+//       select: {
+//         companyId: true,
+//         departmentId: true,
+//         title: true,
+//         location: true,
+//         experience: true,
+//         salaryRange: true,
+//         employmentType: true,
+//         description: true,
+//         responsibilities: true,
+//         requirements: true,
+//         createdById: true,
+//         published: true,
+//         status: true,
+//         createdAt: true,
+//         updatedAt: true,
+//       },
+//       where: {
+//         companyId: id,
+//       },
+//     });
+
+//     return res.status(200).json({ message: "Company Jobs ", jobs });
+//   } catch (error) {
+//     next(error);
+//   }
+// };

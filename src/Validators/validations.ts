@@ -11,12 +11,12 @@ export const roleSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(3, { message: "Code must be atleast 3 characters" })
+    .min(2, { message: "Code must be atleast 2 characters" })
     .max(150, { message: "Code must not be more than 100 characters" }),
   name: z
     .string()
     .trim()
-    .min(3, { message: "Name must be atleast 3 characters" })
+    .min(2, { message: "Name must be atleast 2 characters" })
     .max(150, { message: "Name must not be more than 100 characters" }),
   roleType: z.enum(Object.values(UserType) as [string, ...string[]]).optional(),
   description: z.string().optional(),
@@ -34,7 +34,7 @@ export const userSchema = z.object({
   fullName: z
     .string()
     .trim()
-    .min(1, { message: "full Name must be atleast 3 characters" })
+    .min(3, { message: "full Name must be atleast 3 characters" })
     .max(150, { message: "firstName must not be more than 100 characters" }),
   phone: z
     .string()
@@ -80,9 +80,7 @@ export const departmentSchema = z.object({
 });
 
 export const jobSchema = z.object({
-  // companyId: z  //wiil come in params
-  //   .uuid({ message: "companyId must be a valid UUID" }),
-  departmentId: z.uuid({ message: "departmentId must be a valid UUID" }),
+  department: z.string(),
   title: z
     .string()
     .trim()
@@ -113,12 +111,9 @@ export const jobSchema = z.object({
     .string()
     .trim()
     .min(10, { message: "Description must be at least 10 characters long" }),
-  responsibilities: z
-    .string()
-    .trim()
-    .min(10, {
-      message: "Responsibilities must be at least 10 characters long",
-    }),
+  responsibilities: z.string().trim().min(10, {
+    message: "Responsibilities must be at least 10 characters long",
+  }),
   requirements: z
     .string()
     .trim()
@@ -182,7 +177,7 @@ export const applicationNoteSchema = z.object({
 });
 
 // no need till now
-export const applicationHistorySchema = z.object({
+const applicationHistorySchema = z.object({
   applicationId: z.uuid({ message: "applicationId must be a valid UUID" }),
   oldStatus: z
     .enum(Object.values(ApplicationStatus) as [string, ...string[]])

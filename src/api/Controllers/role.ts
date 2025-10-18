@@ -217,7 +217,7 @@ export const viewRoleById = async (
 };
 
 /**
- * Soft Delete Role
+ * !Soft Delete Role
  */
 export const viewDeleteRole = async (
   req: Request,
@@ -241,7 +241,7 @@ export const viewDeleteRole = async (
 };
 
 /**
- * Soft Delete Roles (Bulk)
+ * !Soft Delete Roles (Bulk)
  */
 export const viewDeleteBulkRoles = async (
   req: Request,

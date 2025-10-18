@@ -55,8 +55,10 @@ export const viewCompanyApplications = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
-
+    const { companyId } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
     const applications = await prisma.application.findMany({
       select: {
         id: true,
@@ -90,15 +92,29 @@ export const viewCompanyApplications = async (
         },
       },
       where: {
-        companyId: companyId,
+        companyId: companyId as string,
         isDeleted: false,
       },
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
     });
 
-    return res
-      .status(200)
-      .json({ message: "All Applications of company", applications });
+    const total = await prisma.application.count({
+      where: { companyId: companyId as string, isDeleted: false },
+    });
+    if (total <= 0)
+      return res.status(404).json({
+        message: "No Applications found",
+      });
+
+    return res.status(200).json({
+      message: "All Applications of company",
+      page,
+      tatalPages: Math.ceil(total / limit),
+      totalItems: total,
+      applications,
+    });
   } catch (error) {
     next(error);
   }
@@ -129,7 +145,7 @@ export const viewChangeApplicationStatus = async (
     if (!application) throw new Error("No application found");
 
     const updatedApplication = await prisma.application.update({
-      where: { id: applicationId},
+      where: { id: applicationId },
       data: {
         status: status,
       },

@@ -89,7 +89,8 @@ export const viewUpdateUser = async (
 ) => {
   try {
     const { id } = req.params;
-    const { fullName, email, phone, companyId } = req.body;
+    console.log("this is request :- ",req.body);
+    const { fullName, email, phone, companyId, role } = req.body;
     const user = await prisma.user.findUnique({
       where: {
         id: id,
@@ -97,6 +98,10 @@ export const viewUpdateUser = async (
       },
     });
     if (!user) throw new Error("No user found with ID");
+    const existingRole = await prisma.role.findFirst({
+      where: { code: role },
+    });
+    if (!existingRole) throw new Error("No Role found with Code");
 
     const updatedUser = await prisma.user.update({
       select: {
@@ -112,7 +117,7 @@ export const viewUpdateUser = async (
         },
       },
       where: { id: id },
-      data: { fullName, email, phone, companyId },
+      data: { fullName, email, phone, companyId, roleId: existingRole.id },
     });
     return res
       .status(200)
@@ -146,6 +151,39 @@ export const deleteUser = async (
     });
 
     return res.status(200).json({ message: "User deleted successfully." });
+  } catch (error) {
+    next(error);
+  }
+};
+export const assingRole = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { roleId } = req.body;
+
+    const role = await prisma.role.findUnique({
+      where: { id: roleId },
+    });
+    if (!role) throw new Error("No role with ID");
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+    if (!user) throw new Error("No user found with ID");
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        roleId: roleId,
+      },
+    });
+
+    return res
+      .status(200)
+      .json({ message: "Role assinged to User successfully " });
   } catch (error) {
     next(error);
   }

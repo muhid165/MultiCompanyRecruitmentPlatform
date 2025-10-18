@@ -17,6 +17,7 @@ export const loginUser = async (email: string, password: string) => {
       email: true,
       password: true,
       roleId: true,
+      companyId:true,
       Role: {
         select:{
           code: true
@@ -51,7 +52,8 @@ export const loginUser = async (email: string, password: string) => {
     fullName: user.fullName,
     token: accessToken,
     refreshToken: refreshToken,
-    role: user.Role?.code
+    role: user.Role?.code,
+    companyId: user.companyId
   };
 
   return userData;

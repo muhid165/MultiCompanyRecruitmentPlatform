@@ -7,7 +7,7 @@ export const viewLoggedUserPermission = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user.id;
 
     // Fetch user-specific and group-based permissions
     const [userPermissions, groupMemberships] = await Promise.all([
@@ -50,7 +50,7 @@ export const viewLoggedUserPermission = async (
         uniquePermissionsMap.set(perm.codename, perm);
       }
     }
-
+    
     const uniquePermissions = Array.from(uniquePermissionsMap.values());
 
     res.status(200).json({
@@ -156,7 +156,7 @@ export const viewCreateGroupWithPermissions = async (
 ) => {
   try {
     const { name, permissionIds } = req.body;
-    const userId = (req as any).user?.userId;
+    const userId = (req as any).user?.id;
     if (!name || !Array.isArray(permissionIds) || permissionIds.length === 0) {
       return res.status(400).json({
         message: "Group name and at least one Permission are required",
@@ -345,8 +345,9 @@ export const viewAssignGroupsToUser = async (
 
     const data = groupIds.map((groupId: string) => ({
       userId: userId,
-      groupId,
+      groupId: JSON.stringify(groupId),
     }));
+    console.log("this is the data :- ",data)
     await prisma.groupMember.createMany({ data });
 
     res.status(200).json({ message: "User groups updated" });

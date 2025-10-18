@@ -7,11 +7,13 @@
   "type": "commonjs",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/server.ts"
+    "dev": "nodemon src/server.ts",
+    "seed": "ts-node prisma/seed.ts" 
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dayjs": "^1.11.18",
     "exceljs": "^4.4.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/exceljs": "^0.5.3",
     "@types/express": "^5.0.3",
