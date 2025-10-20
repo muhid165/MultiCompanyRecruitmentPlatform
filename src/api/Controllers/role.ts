@@ -378,20 +378,35 @@ export const viewBulkExportRoles = async (
 
     const headers = [
       "ID",
+      "CompanyId",
       "Code",
       "Name",
       "Role Type",
       "Description",
-      "Client ID",
       "Created At",
       "Updated At",
     ];
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = "RK Foodland Pvt. Ltd.";
+    workbook.creator = "Multicompany RBAC";
     workbook.created = new Date();
 
     // addSheetWithStyles(workbook, "Roles", rows, headers);
+    const sheet = workbook.addWorksheet("Roles");
+    sheet.addRow(headers);
+
+    rows.forEach((row) => {
+      sheet.addRow([
+        row.id,
+        row.companyId,
+        row.code,
+        row.name,
+        row.roleType,
+        row.description,
+        row.createdAt,
+        row.updatedAt,
+      ]);
+    });
 
     const filePath = path.join(__dirname, "RolesExport.xlsx");
     await workbook.xlsx.writeFile(filePath);

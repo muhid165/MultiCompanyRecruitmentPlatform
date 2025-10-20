@@ -298,9 +298,9 @@
  *           example: "Manages HR operations and employee data"
  *         roleType:
  *           type: string
- *           enum: [SYSTEM, CLIENT, STAFF, ADMIN]
+ *           enum: [SYSTEM, USER, INTERNAL, CLIENT]
  *           description: Type of the role
- *           example: "STAFF"
+ *           example: "SYSTEM/USER/INTERNAL/CLIENT"
  *         companyId:
  *           type: string
  *           description: Optional company ID for client/staff roles
@@ -763,7 +763,6 @@
  *         description: Internal server error.
  */
 
-
 /**
  * @swagger
  * /api/department:
@@ -854,7 +853,6 @@
  *       500:
  *         description: Internal server error
  */
-
 
 /**
  * @swagger
@@ -1005,6 +1003,7 @@
  *       500:
  *         description: Server error
  */
+
 /**
  * @swagger
  * /api/job:
@@ -1130,6 +1129,129 @@
 
 /**
  * @swagger
+ * /api/job/published:
+ *   get:
+ *     summary: Get all Published jobs for a specific company
+ *     description: Retrieve a paginated list of all Published jobs belonging to a specific company. Requires `view_company_job` permission.
+ *     tags:
+ *       - Company - Jobs
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the company whose jobs are being fetched.
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination.
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of jobs to return per page.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved published company jobs.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 5
+ *                 totalItems:
+ *                   type: integer
+ *                   example: 42
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       companyId:
+ *                         type: string
+ *                         example: "6710b32f7f62bca2dcb12e94"
+ *                       departmentId:
+ *                         type: string
+ *                         example: "6710b3f27f62bca2dcb12f02"
+ *                       title:
+ *                         type: string
+ *                         example: "Software Engineer"
+ *                       location:
+ *                         type: string
+ *                         example: "Mumbai"
+ *                       experience:
+ *                         type: string
+ *                         example: "2+ years"
+ *                       salaryRange:
+ *                         type: string
+ *                         example: "6–10 LPA"
+ *                       employmentType:
+ *                         type: string
+ *                         example: "Full-time"
+ *                       description:
+ *                         type: string
+ *                         example: "Responsible for developing and maintaining backend APIs."
+ *                       responsibilities:
+ *                         type: string
+ *                         example: "Build scalable backend services using Node.js and Express."
+ *                       requirements:
+ *                         type: string
+ *                         example: "Experience with REST APIs, SQL/NoSQL databases."
+ *                       CreatedBy:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "6710c945efb2a2d1f2c5e91a"
+ *                       published:
+ *                         type: boolean
+ *                         example: true
+ *                       status:
+ *                         type: string
+ *                         example: "ACTIVE"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-17T10:15:00.000Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-17T10:45:00.000Z"
+ *       400:
+ *         description: Missing or invalid companyId.
+ *       404:
+ *         description: No published jobs found for the given company.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No Job found
+ *       401:
+ *         description: Unauthorized – Missing or invalid token.
+ *       403:
+ *         description: Forbidden – Missing `view_company_job` permission.
+ *       500:
+ *         description: Internal server error.
+ */
+
+/**
+ * @swagger
  * /api/job:
  *   post:
  *     summary: Create a new job
@@ -1231,9 +1353,6 @@
  *           schema:
  *             type: object
  *             properties:
- *               department:
- *                 type: string
- *                 example: "6710c8e56afc5de91d2a749c"
  *               title:
  *                 type: string
  *                 example: Senior Backend Developer
@@ -1243,6 +1362,9 @@
  *               experience:
  *                 type: string
  *                 example: "3+ years"
+ *               salaryRange:
+ *                 type: string
+ *                 example: "8-10 LPA"
  *               employmentType:
  *                 type: string
  *                 example: Full-time
@@ -1341,8 +1463,6 @@
  *       500:
  *         description: Internal server error.
  */
-
-
 
 /**
  * @swagger
@@ -1844,14 +1964,19 @@
  * @swagger
  * /api/roles/export:
  *   get:
- *     summary: Export all roles to Excel file
+ *     summary: Export all roles as Excel file
+ *     description: Generates an Excel sheet of all roles and downloads it.
  *     tags: [Roles]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Excel file downloaded successfully
+ *         description: Excel file download
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
  */
+
 
 /**
  * @swagger
@@ -2370,14 +2495,12 @@
  *       500:
  *         description: Internal server error
  */
-
-
 /**
  * @swagger
  * /api/application/submit:
  *   post:
  *     summary: Submit a new job application
- *     description: Allows candidates to submit applications along with their resume. Open API, no authentication required.
+ *     description: Allows candidates to submit job applications with structured experience and skills data.
  *     tags: [Company - Applications]
  *     requestBody:
  *       required: true
@@ -2395,29 +2518,44 @@
  *             properties:
  *               jobId:
  *                 type: string
+ *                 example: "job_12345"
  *               companyId:
  *                 type: string
+ *                 example: "comp_67890"
  *               candidateName:
  *                 type: string
+ *                 example: "Abdul Mueed"
  *               email:
  *                 type: string
+ *                 format: email
+ *                 example: "mueed@example.com"
  *               phone:
  *                 type: string
- *               experience:
- *                 type: string
+ *                 example: "+91 9876543210"
  *               skills:
  *                 type: string
+ *                 description: JSON array of skills (stringified if sent via form-data)
+ *                 example: ["Node.js", "Express", "MongoDB", "AWS"]
+ *               experience:
+ *                 type: string
+ *                 description: JSON array of experience objects (stringified if sent via form-data)
+ *                 example: '[{"role":"Backend Developer","years":2,"company":"TechCorp"},{"role":"Intern","years":1,"company":"WebSoft"}]'
  *               currentCTC:
- *                 type: string
+ *                 type: number
+ *                 example: 5.5
  *               expectedCTC:
- *                 type: string
+ *                 type: number
+ *                 example: 7.0
  *               noticePeriod:
  *                 type: string
+ *                 example: "30 days"
  *               source:
  *                 type: string
+ *                 example: "LinkedIn"
  *               resume:
  *                 type: string
  *                 format: binary
+ *                 description: Resume file
  *     responses:
  *       201:
  *         description: Application created successfully
@@ -2699,3 +2837,55 @@
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/application/note/{applicationId}:
+ *   get:
+ *     summary: Get all notes for a specific application
+ *     description: Retrieves all non-deleted notes associated with a given application. Requires authentication and `view_application_note` permission.
+ *     tags: [Company - Applications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the application for which to fetch notes.
+ *         example: "app_12345"
+ *     responses:
+ *       200:
+ *         description: Notes retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       userId:
+ *                         type: string
+ *                         example: "user_789"
+ *                       note:
+ *                         type: string
+ *                         example: "Candidate performed well in the interview."
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-20T10:30:00.000Z"
+ *       400:
+ *         description: No notes found for the provided applicationId.
+ *       401:
+ *         description: Unauthorized – Missing or invalid authentication token.
+ *       403:
+ *         description: Forbidden – Missing `view_application_note` permission.
+ *       500:
+ *         description: Internal server error.
+ */
+
+

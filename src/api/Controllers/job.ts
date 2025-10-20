@@ -59,7 +59,6 @@ export const viewUpdateJob = async (
   try {
     const { jobId } = req.params;
     const {
-      departmentId,
       title,
       location,
       experience,
@@ -80,7 +79,6 @@ export const viewUpdateJob = async (
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: {
-        departmentId,
         title,
         location,
         experience,
@@ -113,7 +111,7 @@ export const viewCompanyJob = async (
       select: {
         id: true,
         companyId: true,
-        departmentId: true,
+        Department:{select:{id: true, name: true}},
         title: true,
         location: true,
         experience: true,
@@ -131,6 +129,62 @@ export const viewCompanyJob = async (
       where: {
         companyId: companyId as string,
         isDeleted: false,
+      },
+      skip,
+      take: limit,
+    });
+
+    const total = await prisma.job.count({
+      where: { companyId: companyId as string, isDeleted: false },
+    });
+    if (total <= 0)
+      return res.status(404).json({
+        message: "No Job found",
+      });
+
+    return res.status(200).json({
+      page,
+      tatalPages: Math.ceil(total / limit),
+      totalItems: total,
+      jobs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const viewPublishedCompanyJob = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { companyId } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+    const jobs = await prisma.job.findMany({
+      select: {
+        id: true,
+        companyId: true,
+        departmentId: true,
+        title: true,
+        location: true,
+        experience: true,
+        salaryRange: true,
+        employmentType: true,
+        description: true,
+        responsibilities: true,
+        requirements: true,
+        CreatedBy: { select: { id: true } },
+        published: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      where: {
+        companyId: companyId as string,
+        published: true,
+        status: "ACTIVE",
       },
       skip,
       take: limit,

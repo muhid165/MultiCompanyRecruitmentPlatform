@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { viewCompanyJob, viewCreateJob, viewDeleteJob, viewPublishJob, viewUpdateJob } from "../Controllers/job";
+import { viewCompanyJob, viewCreateJob, viewDeleteJob, viewPublishedCompanyJob, viewPublishJob, viewUpdateJob } from "../Controllers/job";
 import { isAuthenticated } from "../Middlewares/authMiddleware";
 import { hasPermission } from "../Middlewares/permission";
 import { validate } from "../Middlewares/validate";
@@ -13,5 +13,6 @@ router.put("/:jobId", isAuthenticated, hasPermission("update_company_job"), view
 router.put("/publish/:jobId", isAuthenticated, hasPermission("publish_job"), viewPublishJob);
 router.delete("/:jobId", isAuthenticated, hasPermission("delete_job"), viewDeleteJob);
 
+router.get("/published", viewPublishedCompanyJob);   // open API
 
 export default router;

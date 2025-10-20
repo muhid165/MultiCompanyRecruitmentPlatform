@@ -7,7 +7,7 @@ import {
 import { z } from "zod";
 
 export const roleSchema = z.object({
-  companyId: z.string().optional(),
+  companyId: z.uuid(  ).optional(),
   code: z
     .string()
     .trim()
@@ -137,22 +137,16 @@ export const applicationSchema = z.object({
         "Phone must be in international format (E.164), e.g. +14155552671",
     }),
   experience: z
-    .string()
-    .trim()
-    .max(100, { message: "Experience must not exceed 100 characters" })
+    .json()
     .optional(),
   skills: z
-    .string()
-    .trim()
-    .max(250, { message: "Skills must not exceed 250 characters" })
+    .json()
     .optional(),
   currentCTC: z
-    .number()
-    .positive({ message: "Current CTC must be a positive number" })
+    .string()
     .optional(),
   expectedCTC: z
-    .number()
-    .positive({ message: "Expected CTC must be a positive number" })
+    .string()
     .optional(),
   noticePeriod: z
     .string()
@@ -167,8 +161,7 @@ export const applicationSchema = z.object({
 });
 
 export const applicationNoteSchema = z.object({
-  applicationId: z.uuid({ message: "applicationId must be a valid UUID" }),
-  userId: z.uuid({ message: "userId must be a valid UUID" }),
+  // applicationId: z.uuid({ message: "applicationId must be a valid UUID" }),
   note: z
     .string()
     .trim()

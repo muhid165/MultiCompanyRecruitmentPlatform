@@ -21,3 +21,56 @@ export const sendEmail = async (
     `,
   });
 };
+/**
+ * Hi [Candidate Name],
+
+Thank you for applying for the position of **[Job Title]** at **[Company Name]**.
+
+We have received your application and our recruitment team will review your profile shortly.  
+If your qualifications match our requirements, we will get in touch with you for the next steps in the process 
+(such as an interview or assessment).
+
+**What happens next?**
+- Our hiring team will review your application.
+- If shortlisted, you will hear from us within [X] days.
+- If not selected, we will still inform you via email.
+
+In the meantime, feel free to reach out if you have any questions.
+
+Best regards,  
+**[Your Name]**  
+**[Your Position]**  
+**[Company Name]**  
+**[Contact Information]**
+
+ */
+
+export const sendApplicationMail = async (
+  email: string,
+  candidateName: string,
+  companyName: string
+) => {
+  await transporter.sendMail({
+    // from: "mueed072003@gmail.com",
+    to: email,
+    subject: `Welcome to `,
+    text: `Hi ${candidateName},
+    
+    Thank you for applying at ${companyName}.
+    
+    We have received your application and our recruitment team will review your profile shortly.  
+    If your qualifications match our requirements, we will get in touch with you for the next steps in the process.
+
+    What happens next?
+    - Our hiring team will review your application.
+    - If shortlisted, you will hear from us within [X] days.
+    - If not selected, we will still inform you via email.
+
+    In the meantime, feel free to reach out if you have any questions.
+    
+    Best regards,  
+    HR Department
+    ${companyName}.
+    `,
+  });
+};

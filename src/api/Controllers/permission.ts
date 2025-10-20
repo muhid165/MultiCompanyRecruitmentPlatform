@@ -142,7 +142,7 @@ export const viewDeleteUserPermissions = async (
         permissionId: { in: permissionIds },
       },
     });
-
+    
     res.status(200).json({ message: "User permissions deleted successfully" });
   } catch (error) {
     next(error);

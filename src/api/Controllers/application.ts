@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
+import { sendApplicationMail } from "../../Services/mail";
 
 //APPLICATION
 export const viewCreateApplication = async (
@@ -9,7 +10,6 @@ export const viewCreateApplication = async (
 ) => {
   if (!req.file) return res.status(400).json({ message: "No Resume Found.." });
   const filePath = `./public/temp/${req.file.filename}`;
-
   try {
     const {
       jobId,
@@ -25,26 +25,44 @@ export const viewCreateApplication = async (
       source,
     } = req.body;
 
+    let skillsArray = skills;
+    if (typeof skills === "string") {
+      skillsArray = skills.split(",").map((s) => s.trim());
+    }
+    let experienceData = experience;
+    if (typeof experience === "string") {
+      try {
+        experienceData = JSON.parse(experience);
+      } catch {
+        console.warn("Invalid experience format");
+        experienceData = [];
+      }
+    }
     const newApplication = await prisma.application.create({
       data: {
-        jobId: jobId,
-        companyId: companyId,
+        jobId,
+        companyId,
         candidateName,
         email,
         phone,
         resumeUrl: filePath,
-        experience,
-        skills,
+        experience: experienceData,
+        skills: skillsArray,
         currentCTC,
         expectedCTC,
         noticePeriod,
         source,
       },
     });
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
+    });
+    const companyName = company?.name || "";
+    sendApplicationMail(email, candidateName, companyName);
 
-    return res
-      .status(201)
-      .json({ message: "Application created successfully" });
+    return res.status(201).json({
+      message: "Application created successfully",
+    });
   } catch (error) {
     next(error);
   }
@@ -215,7 +233,11 @@ export const deleteApplicationNote = async (
 ) => {
   try {
     const { noteId } = req.params;
-
+    const note = await prisma.applicationNote.findUnique({
+      where: { id: noteId, isDeleted: false },
+    });
+    if (!note)
+      return res.status(400).json({ message: "No Note found with Id" });
     await prisma.applicationNote.update({
       where: {
         id: noteId,
@@ -225,6 +247,27 @@ export const deleteApplicationNote = async (
       },
     });
     return res.status(200).json({ message: "Note Deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const viewApplicationNotes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { applicationid } = req.params;
+    const notes = await prisma.applicationNote.findMany({
+      select: { userId: true, note: true, createdAt: true },
+      where: { applicationId: applicationid, isDeleted: false },
+    });
+    if (!notes)
+      return res
+        .status(400)
+        .json({ message: "No Notes found with applicationId" });
+
+    return res.status(200).json({ data: notes });
   } catch (error) {
     next(error);
   }

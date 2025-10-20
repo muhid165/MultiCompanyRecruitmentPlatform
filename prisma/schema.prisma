@@ -26,9 +26,10 @@ model User {
   ApplicationNotes     ApplicationNote[]
   ApplicationHistories ApplicationHistory[]
 
-  UserPermissions UserPermission[]
-  GroupMember     GroupMember[]
-  Role            Role?            @relation(fields: [roleId], references: [id])
+  UserPermissions    UserPermission[]
+  GroupMember        GroupMember[]
+  Role               Role?               @relation(fields: [roleId], references: [id])
+  CompanyAssingments CompanyAssingment[]
 }
 
 model Role {
@@ -47,12 +48,13 @@ model Role {
 }
 
 model Group {
-  id          String            @id @default(uuid())
-  name        String            @unique
-  Permissions GroupPermission[]
-  Members     GroupMember[]
-  Role        Role?             @relation(fields: [roleId], references: [id])
-  roleId      String?
+  id           String                   @id @default(uuid())
+  name         String                   @unique
+  Permissions  GroupPermission[]
+  Members      GroupMember[]
+  roleId       String?
+  Role         Role?                    @relation(fields: [roleId], references: [id])
+  // CompanyGroup CompanyGroupAssingment[]
 }
 
 model Permission {
@@ -95,23 +97,25 @@ model GroupMember {
 }
 
 model Company {
-  id            String        @id @default(uuid())
-  name          String
-  logoUrl       String?
-  websiteUrl    String?
-  careerPageUrl String?       @unique
-  description   String?
-  status        CompanyStatus @default(ACTIVE)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  isDeleted     Boolean       @default(false)
+  id                     String                   @id @default(uuid())
+  name                   String
+  logoUrl                String?
+  websiteUrl             String?
+  careerPageUrl          String?                  @unique
+  description            String?
+  status                 CompanyStatus            @default(ACTIVE)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  isDeleted              Boolean                  @default(false)
   // Relations
-  Users         User[]
-  Jobs          Job[]
-  Applications  Application[]
-  Department    Department[]
-  Role          Role[]
-  roleId        String?
+  Users                  User[]
+  Jobs                   Job[]
+  Applications           Application[]
+  Department             Department[]
+  Role                   Role[]
+  roleId                 String?
+  CompanyAssingments     CompanyAssingment[]
+  // CompanyGroup CompanyGroupAssingment[]
 }
 
 model Department {
@@ -163,10 +167,10 @@ model Application {
   email         String
   phone         String
   resumeUrl     String
-  experience    String?
-  skills        String?
-  currentCTC    Float?
-  expectedCTC   Float?
+  experience    Json?
+  skills        String[]
+  currentCTC    String?
+  expectedCTC   String?
   noticePeriod  String?
   isDeleted     Boolean           @default(false)
   status        ApplicationStatus @default(APPLIED)
@@ -189,7 +193,7 @@ model ApplicationNote {
   createdAt     DateTime @default(now())
   isDeleted     Boolean  @default(false)
 
-  Application Application @relation(fields: [applicationId], references: [id])
+  Application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   User        User        @relation(fields: [userId], references: [id])
 }
 
@@ -201,9 +205,27 @@ model ApplicationHistory {
   changeById    String
   changedAt     DateTime           @default(now())
 
-  Application Application @relation(fields: [applicationId], references: [id])
+  Application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   ChangedBy   User        @relation(fields: [changeById], references: [id])
 }
+
+model CompanyAssingment {
+  id        String   @id @default(uuid())
+  companyId String
+  userId    String
+  createdAt DateTime @default(now())
+  Company   Company  @relation(fields: [companyId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+// model CompanyGroupAssingment {
+//   id        String   @id @default(uuid())
+//   companyId String
+//   groupId   String
+//   createdAt DateTime @default(now())
+//   Company   Company  @relation(fields: [companyId], references: [id])
+//   Group     Group    @relation(fields: [groupId], references: [id])
+// }
 
 enum CompanyStatus {
   ACTIVE
