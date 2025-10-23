@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
+import { filterData } from "./filter";
+import { ActivityLogType, EntityType, Job } from "@prisma/client";
+import { logActivity } from "../../Utils/activityLog";
 
 export const viewCreateJob = async (
   req: Request,
@@ -44,6 +47,14 @@ export const viewCreateJob = async (
       },
     });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.CREATED,
+      entityType: EntityType.JOB,
+      description: `Created a job`,
+      changes: { jobId: job.id },
+    });
+
     return res
       .status(201)
       .json({ message: " job created successfully..", job });
@@ -57,6 +68,7 @@ export const viewUpdateJob = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { jobId } = req.params;
     const {
       title,
@@ -90,6 +102,14 @@ export const viewUpdateJob = async (
       },
     });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.JOB,
+      description: `Updated a job`,
+      changes: { jobId: job.id },
+    });
+
     return res
       .status(200)
       .json({ message: "Job updated successfully.", updatedJob });
@@ -111,7 +131,7 @@ export const viewCompanyJob = async (
       select: {
         id: true,
         companyId: true,
-        Department:{select:{id: true, name: true}},
+        Department: { select: { id: true, name: true } },
         title: true,
         location: true,
         experience: true,
@@ -214,6 +234,7 @@ export const viewDeleteJob = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { jobId } = req.params; // jobId
     const job = await prisma.job.findUnique({
       where: {
@@ -229,6 +250,15 @@ export const viewDeleteJob = async (
         status: "CLOSED",
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.JOB,
+      description: `Deleted a job`,
+      changes: { jobId: job.id },
+    });
+
     return res.status(200).json({ message: "Job deleted successfully " });
   } catch (error) {
     next(error);
@@ -240,6 +270,7 @@ export const viewPublishJob = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { jobId } = req.params; // jobId
     const job = await prisma.job.findUnique({
       where: { id: jobId },
@@ -253,9 +284,62 @@ export const viewPublishJob = async (
         status: "ACTIVE",
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.JOB,
+      description: `Published a job`,
+      changes: { jobId: job.id },
+    });
+
     return res
       .status(200)
       .json({ message: "Job published successfully", publishedJob });
+  } catch (error) {
+    next(error);
+  }
+};
+export const filterJobs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const { companyId, title } = req.query as {
+      companyId?: string;
+      title?: string;
+    };
+
+    // Step 1: Reuse your generic filterData utility
+    const result = (await filterData({
+      model: prisma.job,
+      query: req.query,
+    })) as { success: boolean; data: Job[] };
+
+    // Step 2: Prepare custom response
+    let responseData: Partial<Job>[] = [];
+
+    if (companyId && !title) {
+      // Only companyId present → return all job titles for that company
+      responseData = result.data.map((job) => ({
+        title: job.title,
+      }));
+    } else if (companyId && title) {
+      // Both companyId & title present → return id + title of matched job(s)
+      responseData = result.data.map((job) => ({
+        id: job.id,
+        title: job.title,
+      }));
+    } else {
+      // Default: return everything (fallback)
+      responseData = result.data;
+    }
+
+    return res.status(200).json({
+      message: "Filtered job data fetched successfully",
+      data: responseData,
+    });
   } catch (error) {
     next(error);
   }

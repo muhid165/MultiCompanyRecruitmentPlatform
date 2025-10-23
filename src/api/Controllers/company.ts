@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
 import strict from "assert/strict";
 import { string } from "zod";
+import { ActivityLogType, Company, EntityType, User } from "@prisma/client";
+import { filterData } from "./filter";
+import { logActivity } from "../../Utils/activityLog";
 
 //COMPANY
 export const viewAllCompanies = async (
@@ -41,7 +44,8 @@ export const viewCreateCompany = async (
   next: NextFunction
 ) => {
   try {
-    const { name, websiteUrl, careerPageUrl, description, userId } = req.body;
+    const userId = (req as any).user.id;
+    const { name, websiteUrl, careerPageUrl, description } = req.body;
 
     // logoUrl will be fileupload path
     if (!req.file) return res.status(400).json({ message: "No File Found.." });
@@ -66,6 +70,14 @@ export const viewCreateCompany = async (
       },
     });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.CREATED,
+      entityType: EntityType.COMPANY,
+      description: `Created a compamny `,
+      changes: { companyId: company.id },
+    });
+
     return res.status(201).json({ message: "Company created successfully." });
   } catch (error) {
     next(error);
@@ -77,6 +89,7 @@ export const viewUpdateCompany = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { id } = req.params;
     const { name, websiteUrl, careerPageUrl, description } = req.body;
 
@@ -103,6 +116,15 @@ export const viewUpdateCompany = async (
         description,
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.COMPANY,
+      description: `Updated a company`,
+      changes: { companyId: id },
+    });
+
     return res
       .status(201)
       .json({ message: "Company updated successfully.", updatedCompany });
@@ -116,6 +138,7 @@ export const deleteCompany = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { id } = req.params;
     const company = await prisma.company.findUnique({
       where: {
@@ -130,6 +153,15 @@ export const deleteCompany = async (
         isDeleted: true,
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.COMPANY,
+      description: `deleted a company`,
+      changes: { companyId: id },
+    });
+
     return res.status(200).json({ message: "company deleted successfully" });
   } catch (error) {
     next(error);
@@ -170,6 +202,7 @@ export const assingCompanyAdmins = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { companyId } = req.query;
     const { roleId, adminIds } = req.body;
 
@@ -183,62 +216,56 @@ export const assingCompanyAdmins = async (
       data: { companyId: companyId as string, roleId },
     });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.ASSIGNED,
+      entityType: EntityType.COMPANY,
+      description: `Assigned a company to a user `,
+      changes: { adminIds: adminIds, companyId: companyId },
+    });
+
     res.status(200).json({ message: "Company admins assigned successfully" });
   } catch (error) {
     next(error);
   }
 };
-// const viewCompanyDepartment = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     const { id } = req.params; // companyId
-//     const departments = await prisma.department.findMany({
-//       select: { companyId: true, name: true, description: true },
-//       where: { companyId: id },
-//     });
+export const viewFilterCompanies = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const { name } = req.query as {
+      name?: string;
+    };
 
-//     return res
-//       .status(200)
-//       .json({ message: "Company departments", departments });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-// const viewCompanyJobs = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     const { id } = req.params; // companyId
-//     const jobs = await prisma.job.findMany({
-//       select: {
-//         companyId: true,
-//         departmentId: true,
-//         title: true,
-//         location: true,
-//         experience: true,
-//         salaryRange: true,
-//         employmentType: true,
-//         description: true,
-//         responsibilities: true,
-//         requirements: true,
-//         createdById: true,
-//         published: true,
-//         status: true,
-//         createdAt: true,
-//         updatedAt: true,
-//       },
-//       where: {
-//         companyId: id,
-//       },
-//     });
+    // Step 1: Use reusable filter utility
+    const result = (await filterData({
+      model: prisma.company,
+      query: req.query,
+    })) as { data: Company[] };
 
-//     return res.status(200).json({ message: "Company Jobs ", jobs });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
+    // Step 2: Format response based on query params
+    let responseData: Partial<Company>[] = [];
+
+    if (!name) {
+      // Case 1 → Only fetch all company names
+      responseData = result.data.map((comp) => ({
+        name: comp.name,
+      }));
+    } else if (name) {
+      // Case 2 → Fetch specific company ID and name
+      responseData = result.data.map((comp) => ({
+        id: comp.id,
+        name: comp.name,
+      }));
+    }
+
+    return res.status(200).json({
+      message: "Filtered companies fetched successfully",
+      data: responseData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

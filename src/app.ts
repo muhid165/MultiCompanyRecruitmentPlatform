@@ -13,6 +13,9 @@ import applicationRoutes from "./api/Routes/application";
 import userRoutes from "./api/Routes/users";
 import permissionRoutes from "./api/Routes/permission";
 import roleRoutes from "./api/Routes/role";
+import analyticsRoutes from "./api/Routes/analytics"
+import reportRoutes from "./api/Routes/report"
+import assignmentRoutes from "./api/Routes/assignment"
 import { errorHandler } from "./Utils/errorHandler";
 const app = express();
 
@@ -30,14 +33,17 @@ app.use(
 app.use(morgan("dev"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use("/api/auth", authRoutes); // Done
-app.use("/api/company", companyRoutes); //
+app.use("/api/auth", authRoutes); 
+app.use("/api/company", companyRoutes); 
 app.use("/api/department", departmentRoutes); 
 app.use("/api/job", jobRoutes); 
 app.use("/api/application", applicationRoutes); 
-app.use("/api/", permissionRoutes); // Done
+app.use("/api/", permissionRoutes); 
 app.use("/api/user", userRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/report", reportRoutes);
+app.use("/api/assignment", assignmentRoutes);
 
 app.use(errorHandler);
 export default app;

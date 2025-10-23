@@ -9,6 +9,8 @@ import prisma from "../../Config/prisma";
 import { sendEmail } from "../../Services/mail";
 import { REFRESH_TOKEN_SECRET } from "../../Config";
 import { generateAccessToken } from "../../Utils/generateToken";
+import { logActivity } from "../../Utils/activityLog";
+import { ActivityLogType, EntityType } from "@prisma/client";
 
 export const viewLogin = async (
   req: Request,
@@ -30,13 +32,23 @@ export const viewRegister = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { fullName, email, phone } = req.body;
     const tempPassword = Math.random().toString(36).slice(-8);
 
-    await registerUser(email, fullName, tempPassword, phone);
+    const user = await registerUser(email, fullName, tempPassword, phone);
     sendEmail(email, fullName, tempPassword);
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.CREATED,
+      entityType: EntityType.USER,
+      entityId: user.id,
+      description: `Registered a User`,
+    });
     return res.status(200).json({
       message: "User created successfully. Login credentials sent via email.",
+      user,
     });
   } catch (error) {
     next(error);
@@ -57,7 +69,7 @@ export const viewProfile = async (
         UserPermissions: true,
         GroupMember: true,
         refreshToken: true,
-        companyId:true,
+        companyId: true,
         Role: {
           select: { code: true },
         },
@@ -85,6 +97,13 @@ export const changePassword = async (
       newPassword,
       confirmPassword
     );
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.USER,
+      description: `Updated user password`,
+    });
 
     return res.status(200).json({ message: "Password updated successfully." });
   } catch (error) {

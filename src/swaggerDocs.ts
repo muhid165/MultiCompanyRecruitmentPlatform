@@ -34,6 +34,15 @@
  *   - name: Roles
  *     description: API endpoints for managing user roles
  *
+ *   - name: Analytics
+ *     description: API endpoints for fetching system-wide and company-specific analytics data.
+ *
+ *   - name: Reports
+ *     description: API endpoints for generating and downloading company-specific reports.
+ *
+ *   - name: Assignments
+ *     description: Tenant assignments management (create, update, fetch, delete)
+ *
  */
 
 /**
@@ -695,6 +704,58 @@
  *       404:
  *         description: Company not found
  */
+/**
+ * @swagger
+ * /api/company/filter:
+ *   get:
+ *     summary: Filter companies by name
+ *     description: >
+ *       Returns filtered company information based on query parameters.  
+ *       - If `name` is **not provided**, it returns all company names.  
+ *       - If `name` is provided, it returns matching company **IDs and names**.
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter companies by name (optional)
+ *     responses:
+ *       200:
+ *         description: Filtered companies fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: o  bject
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Filtered companies fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "comp_12345"
+ *                       name:
+ *                         type: string
+ *                         example: "TechNova Pvt Ltd"
+ *       400:
+ *         description: Invalid query parameters
+ *       401:
+ *         description: Unauthorized, missing or invalid token
+ *       500:
+ *         description: Internal server error
+ */
+
+
+
+
 /**
  * @swagger
  * /api/company/admins:
@@ -1466,6 +1527,63 @@
 
 /**
  * @swagger
+ * /api/job/filter:
+ *   get:
+ *     summary: Filter jobs by company and title
+ *     description: >
+ *       Returns filtered job information based on the provided query parameters.  
+ *       - If only `companyId` is provided → returns all job titles for that company.  
+ *       - If both `companyId` and `title` are provided → returns matched job IDs and titles.  
+ *       - If no parameters are provided → returns all jobs.
+ *     tags: [Company - Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: The ID of the company to filter jobs by
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: The job title to filter by (used along with companyId)
+ *     responses:
+ *       200:
+ *         description: Filtered job data fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Filtered job data fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "job_12345"
+ *                       title:
+ *                         type: string
+ *                         example: "Backend Developer"
+ *       400:
+ *         description: Invalid query parameters
+ *       401:
+ *         description: Unauthorized, missing or invalid token
+ *       500:
+ *         description: Internal server error
+ */
+
+
+/**
+ * @swagger
  * /api/permissions:
  *   get:
  *     summary: Get all available permissions
@@ -1565,19 +1683,70 @@
  * @swagger
  * /api/groups:
  *   get:
- *     summary: Get all groups
+ *     summary: Retrieve a paginated list of all groups
+ *     description: >
+ *       Fetches groups with pagination.
+ *       Each group includes its ID and name.
  *     tags: [Groups]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         required: false
+ *         description: The page number to retrieve.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         required: false
+ *         description: Number of records per page.
  *     responses:
  *       200:
- *         description: List of groups
+ *         description: Groups retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Group'
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 5
+ *                 totalItems:
+ *                   type: integer
+ *                   example: 45
+ *                 groups:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "grp_001"
+ *                       name:
+ *                         type: string
+ *                         example: "Admin Group"
+ *       404:
+ *         description: No groups found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No Groups found
+ *       401:
+ *         description: Unauthorized – Missing or invalid authentication token.
+ *       500:
+ *         description: Internal server error.
  */
 
 /**
@@ -1620,7 +1789,7 @@
  *         required: true
  *         description: Group ID
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -1633,8 +1802,8 @@
  *               permissionIds:
  *                 type: array
  *                 items:
- *                   type: integer
- *                 example: [4, 5, 6]
+ *                   type: string
+ *                 example: [wegwrgwr, sdfgwerg, sfgsrr]
  *     responses:
  *       200:
  *         description: Group permissions updated successfully
@@ -1879,7 +2048,7 @@
  *         in: path
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: ID of the user
  *     requestBody:
  *       required: true
@@ -1891,9 +2060,9 @@
  *               groupIds:
  *                 type: array
  *                 items:
- *                   type: integer
+ *                   type: string
  *             example:
- *               groupIds: [1, 3, 5]
+ *               groupIds: ["dfaslfpom'asd", "edfbsdafjkl", "abdjksdbhas"]
  *     responses:
  *       200:
  *         description: User groups updated successfully
@@ -1976,7 +2145,6 @@
  *               type: string
  *               format: binary
  */
-
 
 /**
  * @swagger
@@ -2888,4 +3056,501 @@
  *         description: Internal server error.
  */
 
+/**
+ * @swagger
+ * /api/department/filter:
+ *   get:
+ *     summary: Retrieve and filter company departments
+ *     description: >
+ *       Fetches departments filtered by **companyId** and/or **name**.
+ *       - If only `companyId` is provided → returns **department names** only.
+ *       - If both `companyId` and `name` are provided → returns **department id and name**.
+ *       - If no filters are provided → returns **all departments**.
+ *     tags: [Company - Departments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter departments belonging to a specific company.
+ *         example: "comp_123"
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter by specific department name within the given company.
+ *         example: "Engineering"
+ *     responses:
+ *       200:
+ *         description: Departments filtered successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Filtered departments fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "dep_001"
+ *                       name:
+ *                         type: string
+ *                         example: "Human Resources"
+ *       400:
+ *         description: Invalid query parameters or no departments found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No departments found for provided filters
+ *       401:
+ *         description: Unauthorized – Missing or invalid authentication token.
+ *       403:
+ *         description: Forbidden – User does not have permission to view departments.
+ *       500:
+ *         description: Internal server error.
+ */
 
+/**
+ * @swagger
+ * /api/analytics:
+ *   get:
+ *     summary: Get global analytics
+ *     description: Retrieves overall analytics across all companies, departments, jobs, and applications.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully fetched global analytics summary.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Global analytics fetched successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     companies:
+ *                       type: integer
+ *                       example: 12
+ *                     departments:
+ *                       type: integer
+ *                       example: 34
+ *                     jobs:
+ *                       type: integer
+ *                       example: 87
+ *                     applications:
+ *                       type: integer
+ *                       example: 412
+ *       401:
+ *         description: Unauthorized – Missing or invalid authentication token.
+ *       403:
+ *         description: Forbidden – Insufficient permissions to view analytics.
+ *       500:
+ *         description: Internal server error.
+ */
+
+/**
+ * @swagger
+ * /api/analytics/{companyId}:
+ *   get:
+ *     summary: Get company-specific analytics
+ *     description: Fetch analytics for a specific company, including department, job, and application counts.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "cmp_12345"
+ *         description: Unique ID of the company.
+ *     responses:
+ *       200:
+ *         description: Successfully fetched analytics for the specified company.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company analytics fetched successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     companyId:
+ *                       type: string
+ *                       example: "cmp_12345"
+ *                     companyName:
+ *                       type: string
+ *                       example: "TechCorp Pvt Ltd"
+ *                     departments:
+ *                       type: integer
+ *                       example: 5
+ *                     jobs:
+ *                       type: integer
+ *                       example: 20
+ *                     applications:
+ *                       type: integer
+ *                       example: 150
+ *       404:
+ *         description: Company not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Company not found
+ *       401:
+ *         description: Unauthorized – Missing or invalid authentication token.
+ *       403:
+ *         description: Forbidden – Insufficient permissions to view analytics.
+ *       500:
+ *         description: Internal server error.
+ */
+
+/**
+ * @swagger
+ * /api/report/{companyId}:
+ *   get:
+ *     summary: Download Excel report for a specific company
+ *     description: Generates and downloads an Excel (.xlsx) report for the given company. Supports optional date filters (`from` and `to` in ISO format) for applications.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: companyId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique ID of the company to generate the report for
+ *       - in: query
+ *         name: from
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date filter (ISO string) for applications
+ *       - in: query
+ *         name: to
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date filter (ISO string) for applications
+ *     responses:
+ *       200:
+ *         description: Excel file containing company report
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Unauthorized – user not logged in
+ *       403:
+ *         description: Forbidden – user does not have permission
+ *       404:
+ *         description: Company not found
+ *       500:
+ *         description: Error generating or downloading the report
+ */
+
+/**
+ * @swagger
+ * /api/report:
+ *   get:
+ *     summary: Download Excel report for all companies
+ *     description: Generates and downloads an Excel (.xlsx) report for all companies. Supports optional date filters (`from` and `to` in ISO format) for applications.
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date filter (ISO string) for applications
+ *       - in: query
+ *         name: to
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date filter (ISO string) for applications
+ *     responses:
+ *       200:
+ *         description: Excel file containing reports for all companies
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       401:
+ *         description: Unauthorized – user not logged in
+ *       403:
+ *         description: Forbidden – user does not have permission
+ *       500:
+ *         description: Error generating or downloading the report
+ */
+
+
+/**
+ * @swagger
+ * /api/assignment/assignment:
+ *   post:
+ *     summary: Create a new tenant assignment
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - companyId
+ *               - userId
+ *             properties:
+ *               companyId:
+ *                 type: string
+ *                 description: ID of the company
+ *               userId:
+ *                 type: string
+ *                 description: ID of the user to assign
+ *     responses:
+ *       201:
+ *         description: Assignment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/TenantAssignment'
+ *       400:
+ *         description: User already assigned
+ *       404:
+ *         description: Company or user not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/assignment/assignments:
+ *   get:
+ *     summary: Get all tenant assignments (paginated)
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of tenant assignments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 total:
+ *                   type: integer
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/TenantAssignment'
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/assignment/assignments/{id}:
+ *   get:
+ *     summary: Get a tenant assignment by ID
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the tenant assignment
+ *     responses:
+ *       200:
+ *         description: Assignment fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/TenantAssignment'
+ *       404:
+ *         description: Assignment not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/assignment/assignments/{id}:
+ *   put:
+ *     summary: Update a tenant assignment (creates a new version, ends old one)
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the tenant assignment to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               companyId:
+ *                 type: string
+ *                 description: Updated company ID
+ *               userId:
+ *                 type: string
+ *                 description: Updated user ID
+ *     responses:
+ *       200:
+ *         description: Assignment updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/TenantAssignment'
+ *       404:
+ *         description: Assignment not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/assignment/assignments/{id}:
+ *   delete:
+ *     summary: Delete a tenant assignment
+ *     tags: [Assignments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the tenant assignment to delete
+ *     responses:
+ *       200:
+ *         description: Assignment deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 id:
+ *                   type: string
+ *       404:
+ *         description: Assignment not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     TenantAssignment:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *         companyId:
+ *           type: string
+ *         userId:
+ *           type: string
+ *         Company:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *             name:
+ *               type: string
+ *         User:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *             fullName:
+ *               type: string
+ *             email:
+ *               type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ */

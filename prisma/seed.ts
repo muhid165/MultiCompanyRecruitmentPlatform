@@ -48,7 +48,7 @@ async function main() {
     { codename: "view_user_permission", name: "view_user_permission" },
     { codename: "delete_user_permission", name: "delete_user_permission" },
     { codename: "view_all_companies", name: "view_all_companies" },
-    { codename: "create_company", name: "create_company" },
+    { codename: "add_company", name: "add_company" },
     { codename: "edit_company", name: "edit_company" },
     { codename: "delete_company", name: "delete_company" },
     { codename: "view_company", name: "view_company" },

@@ -2,12 +2,11 @@ import {
   CompanyStatus,
   UserType,
   EmploymentType,
-  ApplicationStatus,
 } from "@prisma/client";
 import { z } from "zod";
 
 export const roleSchema = z.object({
-  companyId: z.uuid(  ).optional(),
+  companyId: z.uuid().optional(),
   code: z
     .string()
     .trim()
@@ -39,9 +38,9 @@ export const userSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+[1-9]\d{1,14}$/, {
+    .regex(/^[6-9]\d{9}$/, {
       message:
-        "Phone must be in international format (E.164), e.g. +14155552671",
+        "Phone number must be a valid 10-digit Indian number (e.g. 9876543210)",
     }),
 });
 
@@ -122,7 +121,7 @@ export const jobSchema = z.object({
 
 export const applicationSchema = z.object({
   jobId: z.uuid({ message: "jobId must be a valid UUID" }),
-  companyId: z.uuid({ message: "companyId must be a valid UUID" }),
+  companyId: z.string({ message: "companyId must be a valid UUID" }),
   candidateName: z
     .string()
     .trim()
@@ -136,18 +135,10 @@ export const applicationSchema = z.object({
       message:
         "Phone must be in international format (E.164), e.g. +14155552671",
     }),
-  experience: z
-    .json()
-    .optional(),
-  skills: z
-    .json()
-    .optional(),
-  currentCTC: z
-    .string()
-    .optional(),
-  expectedCTC: z
-    .string()
-    .optional(),
+  experience: z.json().optional(),
+  skills: z.json().optional(),
+  currentCTC: z.string().optional(),
+  expectedCTC: z.string().optional(),
   noticePeriod: z
     .string()
     .trim()
@@ -169,14 +160,7 @@ export const applicationNoteSchema = z.object({
     .max(1000, { message: "Note must not exceed 1000 characters" }),
 });
 
-// no need till now
-const applicationHistorySchema = z.object({
-  applicationId: z.uuid({ message: "applicationId must be a valid UUID" }),
-  oldStatus: z
-    .enum(Object.values(ApplicationStatus) as [string, ...string[]])
-    .optional(),
-  newStatus: z.enum(Object.values(ApplicationStatus) as [string, ...string[]], {
-    message: "Invalid new status value",
-  }),
-  changeById: z.uuid({ message: "changeById must be a valid UUID" }),
+export const assignmentSchema = z.object({
+  companyId: z.uuid({ message: "companyId must be a valid UUID" }),
+  userId: z.uuid({ message: "userId must be a valid UUID" }),
 });

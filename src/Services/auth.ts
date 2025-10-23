@@ -1,3 +1,4 @@
+import { includes } from "zod";
 import prisma from "../Config/prisma";
 import {
   generateAccessToken,
@@ -17,12 +18,12 @@ export const loginUser = async (email: string, password: string) => {
       email: true,
       password: true,
       roleId: true,
-      companyId:true,
+      companyId: true,
       Role: {
-        select:{
-          code: true
-        }
-      }
+        select: {
+          code: true,
+        },
+      },
     },
   });
 
@@ -53,7 +54,7 @@ export const loginUser = async (email: string, password: string) => {
     token: accessToken,
     refreshToken: refreshToken,
     role: user.Role?.code,
-    companyId: user.companyId
+    companyId: user.companyId,
   };
 
   return userData;
@@ -83,6 +84,19 @@ export const registerUser = async (
   const hashedPassword = await hashPassword(password);
 
   const user = await prisma.user.create({
+    select: {
+      id: true,
+      roleId: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      companyId: true,
+      UserPermissions: {
+        include: { Permission: { select: { codename: true } } },
+      },
+      GroupMember: { select: { groupId: true } },
+      
+    },
     data: {
       fullName,
       email,
@@ -107,7 +121,7 @@ export const changeUserPassword = async (
   }
 
   const isOldPasswordValid = await comparePassword(oldPassword, user.password);
- 
+
   if (!isOldPasswordValid) {
     throw new Error("Old password in incorrect");
   }

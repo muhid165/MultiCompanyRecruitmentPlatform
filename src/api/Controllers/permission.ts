@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
+import { logActivity } from "../../Utils/activityLog";
+import { ActivityLogType, EntityType } from "@prisma/client";
 
 export const viewLoggedUserPermission = async (
   req: Request,
@@ -50,7 +52,7 @@ export const viewLoggedUserPermission = async (
         uniquePermissionsMap.set(perm.codename, perm);
       }
     }
-    
+
     const uniquePermissions = Array.from(uniquePermissionsMap.values());
 
     res.status(200).json({
@@ -119,6 +121,15 @@ export const viewAssignUserPermissions = async (
     }));
     await prisma.userPermission.createMany({ data });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.ASSIGNED,
+      entityType: EntityType.PERMISSION,
+      entityId: userId,
+      description: `Permissions assigned to User ID ${userId}.`,
+      changes: { userId: userId, assignedPermissions: permissionIds },
+    });
+
     res.status(200).json({ message: "User permissions updated successfully" });
   } catch (error) {
     next(error);
@@ -130,11 +141,15 @@ export const viewDeleteUserPermissions = async (
   next: NextFunction
 ) => {
   try {
+    const loggedInUserId = (req as any).user.id;
+
     const { userId } = req.params;
     const { permissionIds } = req.body;
-  
+
     if (!Array.isArray(permissionIds) || permissionIds.length === 0) {
-      return res.status(400).json({ message: "permissionIds must be a non-empty array" });
+      return res
+        .status(400)
+        .json({ message: "permissionIds must be a non-empty array" });
     }
     await prisma.userPermission.deleteMany({
       where: {
@@ -142,7 +157,16 @@ export const viewDeleteUserPermissions = async (
         permissionId: { in: permissionIds },
       },
     });
-    
+
+    await logActivity({
+      userId: loggedInUserId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.PERMISSION,
+      entityId: userId,
+      description: `Permissions deleted for User ID ${userId}.`,
+      changes: { userId: userId, deletedPermissions: permissionIds },
+    });
+
     res.status(200).json({ message: "User permissions deleted successfully" });
   } catch (error) {
     next(error);
@@ -190,6 +214,19 @@ export const viewCreateGroupWithPermissions = async (
       skipDuplicates: true,
     });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.CREATED,
+      entityType: EntityType.GROUP,
+      entityId: group.id,
+      description: `Group with ID ${group.id} (${name}) created with permissions.`,
+      changes: {
+        groupId: group.id,
+        groupName: name,
+        assignedPermissions: permissionIds,
+      },
+    });
+
     res.status(201).json({
       message: "Group created and permissions assigned successfully",
       group,
@@ -204,9 +241,27 @@ export const viewGroups = async (
   next: NextFunction
 ) => {
   try {
-    const groups = await prisma.group.findMany({});
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
-    res.status(200).json(groups);
+    const groups = await prisma.group.findMany({
+      select: { id: true, name: true },
+      skip,
+      take: limit,
+    });
+
+    const total = await prisma.group.count({});
+    if (total <= 0)
+      return res.status(404).json({
+        message: "No Groups found",
+      });
+    res.status(200).json({
+      page,
+      tatalPages: Math.ceil(total / limit),
+      totalItems: total,
+      groups,
+    });
   } catch (error) {
     next(error);
   }
@@ -220,7 +275,7 @@ export const viewGroupPermissions = async (
     const { id } = req.params;
 
     const permissions = await prisma.groupPermission.findMany({
-      where: { groupId: id},
+      where: { groupId: id },
 
       include: { Group: true, Permission: true },
     });
@@ -238,14 +293,24 @@ export const viewUpdateGroupPermissions = async (
   try {
     const { id } = req.params;
     const { permissionIds } = req.body;
+    console.log("this is the ids ", permissionIds);
     const userId = (req as any).user?.userId;
     await prisma.groupPermission.deleteMany({ where: { groupId: id } });
 
     const data = permissionIds.map((pid: any) => ({
-      groupId: Number(id),
+      groupId: id,
       permissionId: pid,
     }));
     await prisma.groupPermission.createMany({ data });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.GROUP,
+      entityId: id,
+      description: `Permissions updated for Group ID ${id}).`,
+      changes: { groupId: id, updatedPermissions: permissionIds },
+    });
 
     res.status(200).json({ message: "Group permissions updated successfully" });
   } catch (error) {
@@ -276,6 +341,16 @@ export const viewDeleteGroupPermissions = async (
         permissionId: { in: permissionIds },
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.GROUP,
+      entityId: id,
+      description: `Permissions deleted from Group ID ${id}.`,
+      changes: { groupId: id, deletedPermissions: permissionIds },
+    });
+
     res.status(200).json({ message: "Group permissions deleted successfully" });
   } catch (error) {
     next(error);
@@ -291,7 +366,7 @@ export const viewDeleteGroup = async (
     // const { permissionIds } = req.body;
     const userId = (req as any).user?.id;
     const existingGroup = await prisma.group.findUnique({
-      where: { id: id},
+      where: { id: id },
     });
 
     if (!existingGroup) {
@@ -301,6 +376,15 @@ export const viewDeleteGroup = async (
       where: {
         id: id,
       },
+    });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.GROUP,
+      entityId: id,
+      description: `Group with ID ${id} (${existingGroup.name}) permanently deleted.`,
+      changes: { groupId: id, groupName: existingGroup.name },
     });
 
     res.status(200).json({ message: "Group deleted successfully" });
@@ -336,6 +420,7 @@ export const viewAssignGroupsToUser = async (
     const userId = req.params.userId;
     const { groupIds } = req.body;
     console.log(groupIds);
+    const loggedInUserId = (req as any).user?.id;
 
     if (!Array.isArray(groupIds)) {
       return res.status(400).json({ message: "groupIds must be an array" });
@@ -345,10 +430,19 @@ export const viewAssignGroupsToUser = async (
 
     const data = groupIds.map((groupId: string) => ({
       userId: userId,
-      groupId: JSON.stringify(groupId),
+      groupId: groupId,
     }));
-    console.log("this is the data :- ",data)
+    console.log("this is the data :- ", data);
     await prisma.groupMember.createMany({ data });
+
+    await logActivity({
+      userId: loggedInUserId,
+      action: ActivityLogType.ASSIGNED,
+      entityType: EntityType.USER, // The primary entity affected is the User
+      entityId: userId,
+      description: `Groups assigned to User ID ${userId}`,
+      changes: { UserId: userId, assignedGroupIds: groupIds },
+    });
 
     res.status(200).json({ message: "User groups updated" });
   } catch (error) {
@@ -363,6 +457,7 @@ export const viewDeleteUserGroups = async (
   try {
     const userId = req.params.userId;
     const { groupIds } = req.body;
+    const loggedInUserId = (req as any).user?.id;
 
     if (!Array.isArray(groupIds)) {
       return res.status(400).json({ message: "groupIds must be an array" });
@@ -373,6 +468,15 @@ export const viewDeleteUserGroups = async (
         userId: userId,
         groupId: { in: groupIds },
       },
+    });
+
+    await logActivity({
+      userId: loggedInUserId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.USER,
+      entityId: userId,
+      description: `Groups removed from User ID ${userId}`,
+      changes: { UserId: userId, removedGroupIds: groupIds },
     });
 
     res.status(200).json({ message: "Selected groups removed from user" });

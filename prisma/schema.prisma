@@ -25,11 +25,10 @@ model User {
   JobsCreated          Job[]
   ApplicationNotes     ApplicationNote[]
   ApplicationHistories ApplicationHistory[]
-
-  UserPermissions    UserPermission[]
-  GroupMember        GroupMember[]
-  Role               Role?               @relation(fields: [roleId], references: [id])
-  CompanyAssingments CompanyAssingment[]
+  UserPermissions      UserPermission[]
+  GroupMember          GroupMember[]
+  Role                 Role?                @relation(fields: [roleId], references: [id])
+  TenantAssingment     TenantAssingment[]
 }
 
 model Role {
@@ -48,13 +47,12 @@ model Role {
 }
 
 model Group {
-  id           String                   @id @default(uuid())
-  name         String                   @unique
-  Permissions  GroupPermission[]
-  Members      GroupMember[]
-  roleId       String?
-  Role         Role?                    @relation(fields: [roleId], references: [id])
-  // CompanyGroup CompanyGroupAssingment[]
+  id          String            @id @default(uuid())
+  name        String            @unique
+  Permissions GroupPermission[]
+  Members     GroupMember[]
+  roleId      String?
+  Role        Role?             @relation(fields: [roleId], references: [id])
 }
 
 model Permission {
@@ -68,9 +66,8 @@ model Permission {
 model GroupPermission {
   groupId      String
   permissionId String
-
-  Group      Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  Permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  Group        Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  Permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([groupId, permissionId])
 }
@@ -97,25 +94,24 @@ model GroupMember {
 }
 
 model Company {
-  id                     String                   @id @default(uuid())
-  name                   String
-  logoUrl                String?
-  websiteUrl             String?
-  careerPageUrl          String?                  @unique
-  description            String?
-  status                 CompanyStatus            @default(ACTIVE)
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
-  isDeleted              Boolean                  @default(false)
+  id                String             @id @default(uuid())
+  name              String
+  logoUrl           String?
+  websiteUrl        String?
+  careerPageUrl     String?            @unique
+  description       String?
+  status            CompanyStatus      @default(ACTIVE)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  isDeleted         Boolean            @default(false)
   // Relations
-  Users                  User[]
-  Jobs                   Job[]
-  Applications           Application[]
-  Department             Department[]
-  Role                   Role[]
-  roleId                 String?
-  CompanyAssingments     CompanyAssingment[]
-  // CompanyGroup CompanyGroupAssingment[]
+  Users             User[]
+  Jobs              Job[]
+  Applications      Application[]
+  Department        Department[]
+  Role              Role[]
+  roleId            String?
+  TenantAssingments TenantAssingment[]
 }
 
 model Department {
@@ -128,7 +124,7 @@ model Department {
   updatedAt   DateTime @updatedAt
 
   job     Job[]
-  Company Company @relation(fields: [companyId], references: [id])
+  Company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([name, companyId])
 }
@@ -154,8 +150,8 @@ model Job {
 
   // Relations
   CreatedBy   User          @relation(fields: [createdById], references: [id])
-  Company     Company       @relation(fields: [companyId], references: [id])
-  Department  Department?   @relation(fields: [departmentId], references: [id])
+  Company     Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Department  Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   Application Application[]
 }
 
@@ -209,7 +205,7 @@ model ApplicationHistory {
   ChangedBy   User        @relation(fields: [changeById], references: [id])
 }
 
-model CompanyAssingment {
+model TenantAssingment {
   id        String   @id @default(uuid())
   companyId String
   userId    String
@@ -218,14 +214,38 @@ model CompanyAssingment {
   User      User     @relation(fields: [userId], references: [id])
 }
 
-// model CompanyGroupAssingment {
-//   id        String   @id @default(uuid())
-//   companyId String
-//   groupId   String
-//   createdAt DateTime @default(now())
-//   Company   Company  @relation(fields: [companyId], references: [id])
-//   Group     Group    @relation(fields: [groupId], references: [id])
-// }
+model ActivityLog {
+  id          String          @id @default(uuid())
+  userId      String?
+  action      ActivityLogType
+  entityType  EntityType
+  entityId    String?
+  description String?
+  changes     Json?
+  createdAt   DateTime        @default(now())
+}
+
+enum ActivityLogType {
+  CREATED
+  UPDATED
+  DELETED
+  ASSIGNED
+  REVOKED
+}
+
+enum EntityType {
+  USER
+  ROLE
+  PERMISSION
+  COMPANY
+  DEPARTMENT
+  JOB
+  APPLICATION
+  APPLICATION_NOTE
+  APPLICATION_HISTORY
+  TENANT_ASSIGNMENT
+  GROUP
+}
 
 enum CompanyStatus {
   ACTIVE

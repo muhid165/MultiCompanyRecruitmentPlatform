@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
 import { sendApplicationMail } from "../../Services/mail";
+import { logActivity } from "../../Utils/activityLog";
+import { ActivityLogType, EntityType } from "@prisma/client";
 
 //APPLICATION
 export const viewCreateApplication = async (
@@ -39,6 +41,21 @@ export const viewCreateApplication = async (
       }
     }
     const newApplication = await prisma.application.create({
+      select: {
+        id: true,
+        jobId: true,
+        companyId: true,
+        candidateName: true,
+        email: true,
+        phone: true,
+        experience: true,
+        skills: true,
+        currentCTC: true,
+        expectedCTC: true,
+        noticePeriod: true,
+        status: true,
+        source: true,
+      },
       data: {
         jobId,
         companyId,
@@ -62,6 +79,7 @@ export const viewCreateApplication = async (
 
     return res.status(201).json({
       message: "Application created successfully",
+      data: newApplication,
     });
   } catch (error) {
     next(error);
@@ -178,6 +196,15 @@ export const viewChangeApplicationStatus = async (
       },
     });
 
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.APPLICATION,
+      entityId: applicationId,
+      description: `changed application status to ${status}`,
+      changes: { applicationId: applicationId, status: status },
+    });
+
     return res
       .status(200)
       .json({ message: "Application status changed successfully " });
@@ -221,6 +248,15 @@ export const viewCreateApplicationNote = async (
         note,
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.CREATED,
+      entityType: EntityType.APPLICATION,
+      entityId: applicationId,
+      description: `application note created`,
+      changes: { applicationId: applicationId, note: note },
+    });
     return res.status(200).json({ message: "Note created ", applicatioNote });
   } catch (error) {
     next(error);
@@ -232,6 +268,7 @@ export const deleteApplicationNote = async (
   next: NextFunction
 ) => {
   try {
+    const userId = (req as any).user.id;
     const { noteId } = req.params;
     const note = await prisma.applicationNote.findUnique({
       where: { id: noteId, isDeleted: false },
@@ -246,6 +283,16 @@ export const deleteApplicationNote = async (
         isDeleted: true,
       },
     });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.APPLICATION_NOTE,
+      entityId: noteId,
+      description: `deleted application note`,
+      changes: { noteId: noteId, deleted: true },
+    });
+
     return res.status(200).json({ message: "Note Deleted successfully" });
   } catch (error) {
     next(error);
