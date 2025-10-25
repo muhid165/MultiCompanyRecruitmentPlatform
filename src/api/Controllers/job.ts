@@ -27,7 +27,7 @@ export const viewCreateJob = async (
     const existingDepartment = await prisma.department.findFirst({
       where: {
         companyId: companyId as string,
-        name: department,
+        id: department,
       },
     });
     if (!existingDepartment) throw new Error("No Department in company");
@@ -71,6 +71,7 @@ export const viewUpdateJob = async (
     const userId = (req as any).user.id;
     const { jobId } = req.params;
     const {
+      departmentId,
       title,
       location,
       experience,
@@ -80,7 +81,6 @@ export const viewUpdateJob = async (
       responsibilities,
       requirements,
     } = req.body;
-
     const job = await prisma.job.findUnique({
       where: {
         id: jobId,
@@ -91,6 +91,7 @@ export const viewUpdateJob = async (
     const updatedJob = await prisma.job.update({
       where: { id: jobId },
       data: {
+        departmentId,
         title,
         location,
         experience,
@@ -323,6 +324,7 @@ export const filterJobs = async (
     if (companyId && !title) {
       // Only companyId present → return all job titles for that company
       responseData = result.data.map((job) => ({
+        id: job.id,
         title: job.title,
       }));
     } else if (companyId && title) {
@@ -342,5 +344,73 @@ export const filterJobs = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+export const viewSearchJobs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query, id } = req.query;
+
+    if (
+      !id ||
+      typeof id !== "string" ||
+      !query ||
+      typeof query !== "string" ||
+      query.trim() === ""
+    ) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const jobs = await prisma.job.findMany({
+      where: {
+        OR: [{ title: { contains: query, mode: "insensitive" } }],
+        companyId: id,
+        isDeleted: false,
+      },
+      orderBy: { title: "asc" },
+    });
+
+    return res.status(200).json({
+      jobs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const viewDeleteBulkjobs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const ids: string[] = req.body.ids;
+    const userId = (req as any).user.userId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided for deletion" });
+    }
+
+    await prisma.job.updateMany({
+      where: { id: { in: ids } },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+
+    for (const id of ids) {
+      await logActivity({
+        userId: userId,
+        action: ActivityLogType.DELETED,
+        entityType: EntityType.JOB,
+        entityId: id,
+        description: `Deleted Bulk Job ids`,
+      });
+    }
+
+    return res.status(200).json({ message: "Jobs Deleted successfully" });
+  } catch (err) {
+    next(err);
   }
 };

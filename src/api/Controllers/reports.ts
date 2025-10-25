@@ -3,7 +3,8 @@ import prisma from "../../Config/prisma";
 import ExcelJS from "exceljs";
 import path from "path";
 import fs from "fs";
-// working fine 
+
+// working fine
 export const exportCompanyReport = async (
   req: Request,
   res: Response,
@@ -11,11 +12,12 @@ export const exportCompanyReport = async (
 ) => {
   try {
     const { companyId } = req.params;
-    const { from, to } = req.query; // expecting ISO date strings
+    const { from, to } = req.query;
 
     const fromDate = from ? new Date(from as string) : new Date("1970-01-01");
     const toDate = to ? new Date(to as string) : new Date();
 
+    // ✅ Fetch departments
     const departments = await prisma.department.findMany({
       where: { companyId, isDeleted: false },
       include: {
@@ -43,15 +45,27 @@ export const exportCompanyReport = async (
       { header: "Resume URL", key: "resume", width: 50 },
     ];
 
-    for (const dept of departments) {
-      if (!dept.job || dept.job.length === 0) {
-        worksheet.addRow({
-          department: dept.name,
-          title: "-",
-          description: "-",
-          resume: "-",
-        });
-      } else {
+    // ✅ Handle no data case
+    if (!departments || departments.length === 0) {
+      worksheet.addRow({
+        department: "-",
+        title: "-",
+        description: "-",
+        resume: "No data available for this company.",
+      });
+    } else {
+      // ✅ Add rows for each department, job, and application
+      for (const dept of departments) {
+        if (!dept.job || dept.job.length === 0) {
+          worksheet.addRow({
+            department: dept.name,
+            title: "-",
+            description: "-",
+            resume: "-",
+          });
+          continue;
+        }
+
         for (const job of dept.job) {
           if (!job.Application || job.Application.length === 0) {
             worksheet.addRow({
@@ -60,20 +74,29 @@ export const exportCompanyReport = async (
               description: job.description,
               resume: "-",
             });
-          } else {
-            for (const app of job.Application) {
-              worksheet.addRow({
-                department: dept.name,
-                title: job.title,
-                description: job.description,
-                resume: app.resumeUrl || "-",
-              });
-            }
+            continue;
+          }
+
+          for (const application of job.Application) {
+            const fileName = path.basename(application.resumeUrl || "");
+            const resumeFullUrl = application.resumeUrl
+              ? `${req.protocol}://${req.get("host")}/files/${fileName}`
+              : "-";
+
+            worksheet.addRow({
+              department: dept.name,
+              title: job.title,
+              description: job.description,
+              resume: application.resumeUrl
+                ? { text: "Download Resume", hyperlink: resumeFullUrl }
+                : "-",
+            });
           }
         }
       }
     }
 
+    // ✅ Move response sending *outside* the loop
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -112,7 +135,10 @@ export const exportGlobalReports = async (
               where: { isDeleted: false },
               include: {
                 Application: {
-                  where: { isDeleted: false, createdAt: { gte: fromDate, lte: toDate } },
+                  where: {
+                    isDeleted: false,
+                    createdAt: { gte: fromDate, lte: toDate },
+                  },
                 },
               },
             },
@@ -120,6 +146,9 @@ export const exportGlobalReports = async (
         },
       },
     });
+
+    // Build public URL for resume
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     const workbook = new ExcelJS.Workbook();
 
@@ -151,13 +180,23 @@ export const exportGlobalReports = async (
                 resume: "-",
               });
             } else {
-              for (const app of job.Application) {
-                worksheet.addRow({
-                  department: dept.name,
-                  title: job.title,
-                  description: job.description,
-                  resume: app.resumeUrl || "-",
-                });
+              for (const application of job.Application) {
+                if (application.resumeUrl) {
+                  const fileName = path.basename(application.resumeUrl);
+                  const resumeFullUrl = `${req.protocol}://${req.get(
+                    "host"
+                  )}/files/${fileName}`;
+
+                  worksheet.addRow({
+                    department: dept.name,
+                    title: job.title,
+                    description: job.description,
+                    resume: {
+                      text: "Download Resume",
+                      hyperlink: resumeFullUrl,
+                    },
+                  });
+                }
               }
             }
           }

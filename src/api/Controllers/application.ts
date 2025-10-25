@@ -10,8 +10,13 @@ export const viewCreateApplication = async (
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.file) return res.status(400).json({ message: "No Resume Found.." });
-  const filePath = `./public/temp/${req.file.filename}`;
+  if (!req.file)
+    throw new Error(
+      "Application error: Resume file is missing. Please upload a resume."
+    );
+  const resumeUrl = `${req.protocol}://${req.get("host")}/files/${
+    req.file.filename
+  }`;
   try {
     const {
       jobId,
@@ -41,28 +46,13 @@ export const viewCreateApplication = async (
       }
     }
     const newApplication = await prisma.application.create({
-      select: {
-        id: true,
-        jobId: true,
-        companyId: true,
-        candidateName: true,
-        email: true,
-        phone: true,
-        experience: true,
-        skills: true,
-        currentCTC: true,
-        expectedCTC: true,
-        noticePeriod: true,
-        status: true,
-        source: true,
-      },
       data: {
         jobId,
         companyId,
         candidateName,
         email,
         phone,
-        resumeUrl: filePath,
+        resumeUrl: resumeUrl,
         experience: experienceData,
         skills: skillsArray,
         currentCTC,
@@ -85,6 +75,7 @@ export const viewCreateApplication = async (
     next(error);
   }
 };
+
 export const viewCompanyApplications = async (
   req: Request,
   res: Response,
@@ -96,23 +87,11 @@ export const viewCompanyApplications = async (
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
     const applications = await prisma.application.findMany({
-      select: {
-        id: true,
-        jobId: true,
-        companyId: true,
-        candidateName: true,
-        email: true,
-        phone: true,
-        resumeUrl: true,
-        experience: true,
-        skills: true,
-        currentCTC: true,
-        expectedCTC: true,
-        noticePeriod: true,
-        status: true,
-        source: true,
-        createdAt: true,
-        updatedAt: true,
+      where: {
+        companyId: companyId as string,
+        isDeleted: false,
+      },
+      include: {
         Notes: {
           select: {
             userId: true,
@@ -126,10 +105,6 @@ export const viewCompanyApplications = async (
             changeById: true,
           },
         },
-      },
-      where: {
-        companyId: companyId as string,
-        isDeleted: false,
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -155,25 +130,16 @@ export const viewCompanyApplications = async (
     next(error);
   }
 };
+
 export const viewChangeApplicationStatus = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { applicationId } = req.params; // application ID
+    const applicationId = req.params.id; // application ID
     const userId = (req as any).user.id;
     const { status } = req.body;
-    const validStatuses = [
-      "APPLIED",
-      "SHORTLISTED",
-      "INTERVIEW",
-      "OFFERED",
-      "HIRED",
-      "REJECTED",
-    ];
-    if (!validStatuses.includes(status))
-      throw new Error("Invalid Application status provided.");
 
     const application = await prisma.application.findUnique({
       where: { id: applicationId },
@@ -187,7 +153,7 @@ export const viewChangeApplicationStatus = async (
       },
     });
 
-    const applHistory = await prisma.applicationHistory.create({
+    const applicationHistory = await prisma.applicationHistory.create({
       data: {
         applicationId: applicationId,
         oldStatus: application.status,
@@ -212,6 +178,7 @@ export const viewChangeApplicationStatus = async (
     next(error);
   }
 };
+
 //APPLICATION HISTORY
 export const viewApplicationHistory = async (
   req: Request,
@@ -219,7 +186,7 @@ export const viewApplicationHistory = async (
   next: NextFunction
 ) => {
   try {
-    const { applicationId } = req.params;
+    const applicationId = req.params.id;
     const history = await prisma.applicationHistory.findMany({
       where: {
         applicationId: applicationId,
@@ -231,6 +198,7 @@ export const viewApplicationHistory = async (
     next(error);
   }
 };
+
 //APPLICATION NOTE
 export const viewCreateApplicationNote = async (
   req: Request,
@@ -239,7 +207,7 @@ export const viewCreateApplicationNote = async (
 ) => {
   try {
     const userId = (req as any).user.id;
-    const { applicationId } = req.params;
+    const applicationId = req.params.id;
     const { note } = req.body;
     const applicatioNote = await prisma.applicationNote.create({
       data: {
@@ -262,6 +230,7 @@ export const viewCreateApplicationNote = async (
     next(error);
   }
 };
+
 export const deleteApplicationNote = async (
   req: Request,
   res: Response,
@@ -269,7 +238,7 @@ export const deleteApplicationNote = async (
 ) => {
   try {
     const userId = (req as any).user.id;
-    const { noteId } = req.params;
+    const noteId = req.params.id;
     const note = await prisma.applicationNote.findUnique({
       where: { id: noteId, isDeleted: false },
     });
@@ -298,13 +267,14 @@ export const deleteApplicationNote = async (
     next(error);
   }
 };
+
 export const viewApplicationNotes = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { applicationid } = req.params;
+    const applicationid = req.params.id;
     const notes = await prisma.applicationNote.findMany({
       select: { userId: true, note: true, createdAt: true },
       where: { applicationId: applicationid, isDeleted: false },
@@ -317,5 +287,121 @@ export const viewApplicationNotes = async (
     return res.status(200).json({ data: notes });
   } catch (error) {
     next(error);
+  }
+};
+
+export const viewSearchApplications = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query, id } = req.query;
+
+    if (
+      !id ||
+      typeof id !== "string" ||
+      !query ||
+      typeof query !== "string" ||
+      query.trim() === ""
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Search query and company ID is required" });
+    }
+
+    const applications = await prisma.application.findMany({
+      where: {
+        OR: [
+          { candidateName: { contains: query, mode: "insensitive" } },
+          { email: { contains: query, mode: "insensitive" } },
+        ],
+        companyId: id,
+        isDeleted: false,
+      },
+      orderBy: { candidateName: "asc" },
+    });
+
+    return res.status(200).json({
+      applications,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const viewDeleteApplication = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const applicationId = req.params.id;
+    const userId = (req as any).user.userId;
+
+    const application = await prisma.application.findUnique({
+      where: {
+        id: applicationId,
+      },
+    });
+
+    if (!application) throw new Error("No Application Found.");
+
+    await prisma.application.update({
+      where: {
+        id: applicationId,
+      },
+      data: { isDeleted: true , deletedAt: new Date()},
+    });
+
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.APPLICATION,
+      entityId: applicationId,
+      description: `Deleted Application`,
+    });
+
+    return res
+      .status(200)
+      .json({ message: "Application  Deleted successfully." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const viewDeleteBulkApplications = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const ids: string[] = req.body.ids;
+    const userId = (req as any).user.userId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided for deletion" });
+    }
+
+    await prisma.application.updateMany({
+      where: { id: { in: ids } },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+
+    for (const id of ids) {
+      await logActivity({
+        userId: userId,
+        action: ActivityLogType.DELETED,
+        entityType: EntityType.APPLICATION,
+        entityId: id,
+        description: `Deleted Bulk Applications ids`,
+      });
+    }
+
+    return res
+      .status(200)
+      .json({ message: "Applications Deleted successfully" });
+  } catch (err) {
+    next(err);
   }
 };

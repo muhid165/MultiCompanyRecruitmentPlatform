@@ -1,9 +1,7 @@
 import { Router } from "express";
-
 import { validate } from "../Middlewares/validate";
 import { assignmentSchema } from "../../Validators/validations";
 import { isAuthenticated } from "../Middlewares/authMiddleware";
-
 import { viewAssignments, viewAssignmentsById, viewCreateAssignment, viewDeleteAssignment, viewUpdateAssignment } from "../Controllers/assignment";
 import { hasPermission } from "../Middlewares/permission";
 
@@ -18,7 +16,7 @@ router.get("/assignments", isAuthenticated, hasPermission("view_assingment"), vi
 // Get by ID
 router.get("/assignments/:id", isAuthenticated, hasPermission("view_assingment"), viewAssignmentsById);
 
-// Update (creates a new version, ends old one)
+// Update
 router.put(
   "/assignments/:id",
   isAuthenticated,

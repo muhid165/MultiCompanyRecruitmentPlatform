@@ -17,6 +17,16 @@ export const viewAllCompanies = async (
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
     const companies = await prisma.company.findMany({
+      select: {
+        id: true,
+        name: true,
+        logoUrl: true,
+        websiteUrl: true,
+        careerPageUrl: true,
+        description: true,
+        status: true,
+        location: true,
+      },
       where: {
         isDeleted: false,
       },
@@ -45,11 +55,13 @@ export const viewCreateCompany = async (
 ) => {
   try {
     const userId = (req as any).user.id;
-    const { name, websiteUrl, careerPageUrl, description } = req.body;
+    const { name, websiteUrl, careerPageUrl, location, description } = req.body;
 
     // logoUrl will be fileupload path
     if (!req.file) return res.status(400).json({ message: "No File Found.." });
-    const filePath = `./public/temp/${req.file.filename}`;
+    const logoUrl = `${req.protocol}://${req.get("host")}/files/${
+      req.file.filename
+    }`;
 
     const existingCareerPage = await prisma.company.findUnique({
       where: {
@@ -64,8 +76,9 @@ export const viewCreateCompany = async (
       data: {
         name,
         websiteUrl,
-        logoUrl: filePath,
+        logoUrl: logoUrl,
         careerPageUrl,
+        location,
         description,
       },
     });
@@ -90,30 +103,25 @@ export const viewUpdateCompany = async (
 ) => {
   try {
     const userId = (req as any).user.id;
-    const { id } = req.params;
-    const { name, websiteUrl, careerPageUrl, description } = req.body;
+    const companyId = req.params.id;
+    const { name, websiteUrl, careerPageUrl, description, location } = req.body;
 
     if (!req.file) return res.status(400).json({ message: "No File Found.." });
-    const filePath = `./public/temp/${req.file.filename}`;
+    const logoUrl = `${req.protocol}://${req.get("host")}/files/${
+      req.file.filename
+    }`;
 
     const updatedCompany = await prisma.company.update({
-      select: {
-        id: true,
-        name: true,
-        logoUrl: true,
-        websiteUrl: true,
-        careerPageUrl: true,
-        description: true,
-      },
       where: {
-        id: id,
+        id: companyId,
       },
       data: {
         name,
         websiteUrl,
-        logoUrl: filePath,
+        logoUrl: logoUrl,
         careerPageUrl,
         description,
+        location,
       },
     });
 
@@ -122,7 +130,7 @@ export const viewUpdateCompany = async (
       action: ActivityLogType.UPDATED,
       entityType: EntityType.COMPANY,
       description: `Updated a company`,
-      changes: { companyId: id },
+      changes: { companyId: companyId },
     });
 
     return res
@@ -139,18 +147,19 @@ export const deleteCompany = async (
 ) => {
   try {
     const userId = (req as any).user.id;
-    const { id } = req.params;
+    const companyId = req.params.id;
     const company = await prisma.company.findUnique({
       where: {
-        id: id,
+        id: companyId,
       },
     });
     if (!company || company.isDeleted === true)
       throw new Error("No Company with ID.");
     await prisma.company.update({
-      where: { id: id },
+      where: { id: companyId },
       data: {
         isDeleted: true,
+        deletedAt: new Date(),
       },
     });
 
@@ -159,10 +168,10 @@ export const deleteCompany = async (
       action: ActivityLogType.DELETED,
       entityType: EntityType.COMPANY,
       description: `deleted a company`,
-      changes: { companyId: id },
+      changes: { companyId: companyId },
     });
 
-    return res.status(200).json({ message: "company deleted successfully" });
+    return res.status(200).json({ message: "Company deleted successfully" });
   } catch (error) {
     next(error);
   }
@@ -174,8 +183,7 @@ export const viewCompanyById = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.params;
-    console.log("this is company ID -> ", companyId);
+    const companyId = req.params.id;
     const company = await prisma.company.findUnique({
       select: {
         name: true,
@@ -183,6 +191,7 @@ export const viewCompanyById = async (
         websiteUrl: true,
         careerPageUrl: true,
         description: true,
+        location: true,
         Department: true,
         Jobs: true,
         Applications: true,
@@ -196,6 +205,7 @@ export const viewCompanyById = async (
     next(error);
   }
 };
+// no need till now
 export const assingCompanyAdmins = async (
   req: Request,
   res: Response,
@@ -251,6 +261,7 @@ export const viewFilterCompanies = async (
     if (!name) {
       // Case 1 → Only fetch all company names
       responseData = result.data.map((comp) => ({
+        id: comp.id,
         name: comp.name,
       }));
     } else if (name) {
@@ -267,5 +278,66 @@ export const viewFilterCompanies = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+export const viewSearchCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const companies = await prisma.company.findMany({
+      where: {
+        OR: [{ name: { contains: query, mode: "insensitive" } }],
+        isDeleted: false,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return res.status(200).json({
+      companies,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const viewDeleteBulkCompanies = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const ids: string[] = req.body.ids;
+    const userId = (req as any).user.userId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided for deletion" });
+    }
+
+    await prisma.company.updateMany({
+      where: { id: { in: ids } },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+
+    for (const id of ids) {
+      await logActivity({
+        userId: userId,
+        action: ActivityLogType.DELETED,
+        entityType: EntityType.COMPANY,
+        entityId: id,
+        description: `Deleted Bulk Companies ids`,
+      });
+    }
+
+    return res.status(200).json({ message: "Companies Deleted successfully" });
+  } catch (err) {
+    next(err);
   }
 };

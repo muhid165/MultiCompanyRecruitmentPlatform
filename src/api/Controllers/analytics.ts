@@ -9,10 +9,10 @@ export const viewGlobalAnalytics = async (
   try {
     const [companyCount, departmentCount, jobCount, applicationCount] =
       await Promise.all([
-        prisma.company.count(),
-        prisma.department.count(),
-        prisma.job.count(),
-        prisma.application.count(),
+        prisma.company.count({ where: { isDeleted: false } }),
+        prisma.department.count({ where: { isDeleted: false } }),
+        prisma.job.count({ where: { isDeleted: false } }),
+        prisma.application.count({ where: { isDeleted: false } }),
       ]);
 
     return res.status(200).json({

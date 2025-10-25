@@ -9,13 +9,17 @@ export const errorHandler = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("Error:- ", err);
+  console.log("Caught Error: ", err);
+
+  let statusCode = 500;
+  let message = "An unknown server error occurred.";
+
   if (err instanceof PrismaClientKnownRequestError) {
     switch (err.code) {
       case "P2002": {
         const field = (err.meta?.target as string[] | undefined)?.[0];
         return res.status(400).json({
-          message: `Unique constraint failed: ${field} already exists.`,
+          message: `Unique constraint failed: ${field} already exists. Please use a different value.`,
         });
       }
       case "P2003":
@@ -25,7 +29,7 @@ export const errorHandler = async (
         });
       case "P2025":
         return res.status(404).json({
-          message: "Record not found.",
+          message: "The requested record could not be found.",
         });
       default:
         return res.status(500).json({ message: "Unknown database Error" });
@@ -49,9 +53,14 @@ export const errorHandler = async (
     }
     return res.status(400).json({ message: `Multer Error: ${err.message}` });
   } else if (err instanceof Error) {
-    res.status(500).json({ message: err.message });
+    statusCode = (err as any).status || (err as any).statusCode || 500;
+    message = err.message;
+
+    if (statusCode < 400 || statusCode > 599) {
+      statusCode = 500;
+    }
+    return res.status(statusCode).json({ message });
   } else {
-    return res.status(500).json({ message: "An Unknows Errro occurred" });
+    return res.status(statusCode).json({ message });
   }
-  next(err);
 };

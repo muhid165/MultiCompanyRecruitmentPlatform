@@ -2,6 +2,7 @@ import {
   CompanyStatus,
   UserType,
   EmploymentType,
+  ApplicationStatus,
 } from "@prisma/client";
 import { z } from "zod";
 
@@ -53,6 +54,10 @@ export const companySchema = z.object({
   logoUrl: z.url({ message: "Logo URL must be valid" }).optional(),
   websiteUrl: z.url({ message: "Website URL must be valid" }).optional(),
   careerPageUrl: z.url({ message: "Career page URL must be valid" }).optional(),
+  location: z
+    .string()
+    .min(5, { message: "location cannot be less than 5 characters" })
+    .max(500, { message: "location must not exceed 500 characters" }),
   description: z
     .string()
     .trim()
@@ -131,9 +136,9 @@ export const applicationSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+[1-9]\d{1,14}$/, {
+    .regex(/^[6-9]\d{9}$/, {
       message:
-        "Phone must be in international format (E.164), e.g. +14155552671",
+        "Phone number must be a valid 10-digit Indian number (e.g. 9876543210)",
     }),
   experience: z.json().optional(),
   skills: z.json().optional(),
@@ -158,6 +163,10 @@ export const applicationNoteSchema = z.object({
     .trim()
     .min(5, { message: "Note must be at least 5 characters long" })
     .max(1000, { message: "Note must not exceed 1000 characters" }),
+});
+
+export const applicationStatusSchema = z.object({
+  status: z.enum(Object.values(ApplicationStatus) as [string, ...string[]]),
 });
 
 export const assignmentSchema = z.object({

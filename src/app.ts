@@ -17,6 +17,7 @@ import analyticsRoutes from "./api/Routes/analytics"
 import reportRoutes from "./api/Routes/report"
 import assignmentRoutes from "./api/Routes/assignment"
 import { errorHandler } from "./Utils/errorHandler";
+import path from "path";
 const app = express();
 
 app.use(express.json());
@@ -32,6 +33,7 @@ app.use(
 );
 app.use(morgan("dev"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/files", express.static(path.join("D:/PRODUCTS/cms-backend/public/temp")));
 
 app.use("/api/auth", authRoutes); 
 app.use("/api/company", companyRoutes); 

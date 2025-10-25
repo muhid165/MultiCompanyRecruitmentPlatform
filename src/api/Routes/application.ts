@@ -7,22 +7,29 @@ import {
   viewCreateApplicationNote,
   viewCompanyApplications,
   viewApplicationNotes,
+  viewSearchApplications,
+  viewDeleteApplication,
+  viewDeleteBulkApplications,
 } from "../Controllers/application";
 import { isAuthenticated } from "../Middlewares/authMiddleware";
 import { hasPermission } from "../Middlewares/permission";
 import { validate } from "../Middlewares/validate";
-import { applicationNoteSchema, applicationSchema } from "../../Validators/validations";
+import { applicationNoteSchema, applicationSchema, applicationStatusSchema, bulkDeleteSchema } from "../../Validators/validations";
 import { upload } from "../Middlewares/multer";
 const fileUpload = upload.single("resume");
 const router = Router();
 
 //APPLICATIONS
-router.get("/history/:applicationId", isAuthenticated, hasPermission("view_application_history"), viewApplicationHistory);
-router.put("/:applicationId", isAuthenticated, hasPermission("change_application_status"), viewChangeApplicationStatus);
-router.post("/note/:applicationId", isAuthenticated, hasPermission("add_application_note"), validate(applicationNoteSchema), viewCreateApplicationNote);
-router.get("/note/:applicationId", isAuthenticated, hasPermission("view_application_note"), viewApplicationNotes);
-router.delete("/note/:noteId", isAuthenticated, hasPermission("delete_application_note"), deleteApplicationNote);
-router.get("/", isAuthenticated, hasPermission("delete_application_note"), viewCompanyApplications);
+router.get("/history/:id", isAuthenticated, hasPermission("view_application_history"), viewApplicationHistory);
+router.get("/search", isAuthenticated, hasPermission("view_application"), viewSearchApplications); 
+router.get("/note/:id", isAuthenticated, hasPermission("view_application_note"), viewApplicationNotes);
+router.get("/", isAuthenticated, hasPermission("view_application"), viewCompanyApplications); 
+router.post("/note/:id", isAuthenticated, hasPermission("add_application_note"), validate(applicationNoteSchema), viewCreateApplicationNote);
+router.put("/:id", isAuthenticated, hasPermission("change_application_status"),validate(applicationStatusSchema), viewChangeApplicationStatus);
+
+router.delete("/:id", isAuthenticated, hasPermission("delete_application"), viewDeleteApplication); // new 
+router.delete("/bulk", isAuthenticated, hasPermission("delete_application"),validate(bulkDeleteSchema), viewDeleteBulkApplications); // new 
+router.delete("/note/:id", isAuthenticated, hasPermission("delete_application_note"), deleteApplicationNote);
 
 router.post("/submit", fileUpload, validate(applicationSchema), viewCreateApplication); //open api
 

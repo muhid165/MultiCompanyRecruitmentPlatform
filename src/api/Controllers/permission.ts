@@ -484,3 +484,61 @@ export const viewDeleteUserGroups = async (
     next(error);
   }
 };
+export const viewSearchPermissions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const permissions = await prisma.permission.findMany({
+      where: {
+        OR: [
+          { codename: { contains: query, mode: "insensitive" } },
+          { name: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { codename: "asc" },
+    });
+
+    return res.status(200).json({
+      permissions,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export const viewSearchGroups = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const groups = await prisma.group.findMany({
+      where: {
+        OR: [
+          // { codename: { contains: query, mode: "insensitive" } },
+          { name: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return res.status(200).json({
+      groups,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

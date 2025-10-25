@@ -11,6 +11,6 @@ router.post("/register", isAuthenticated, hasPermission("add_user"), validate(us
 router.post("/login", viewLogin);
 router.get("/profile", isAuthenticated, viewProfile);
 router.put("/change-password", isAuthenticated, changePassword);
-// router.post("/refresh-token", viewRefreshToken);
+router.post("/refresh-token", viewRefreshToken);
 
 export default router;

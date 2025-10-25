@@ -583,6 +583,7 @@
  *               - careerPageUrl
  *               - description
  *               - file
+ *               - location
  *             properties:
  *               name:
  *                 type: string
@@ -593,6 +594,9 @@
  *               careerPageUrl:
  *                 type: string
  *                 example: https://binaryworkdata.com/careers
+ *               location:
+ *                 type: string
+ *                 example: Thane.
  *               description:
  *                 type: string
  *                 example: Web hosting and AI solutions provider.
@@ -625,7 +629,7 @@
  *         required: true
  *         description: Company ID
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -638,6 +642,8 @@
  *               websiteUrl:
  *                 type: string
  *               careerPageUrl:
+ *                 type: string
+ *               location:
  *                 type: string
  *               description:
  *                 type: string
@@ -695,7 +701,7 @@
  *         required: true
  *         description: Company ID
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Company retrieved successfully
@@ -2833,7 +2839,7 @@
 
 /**
  * @swagger
- * /api/application/history/{applicationId}:
+ * /api/application/history/{id}:
  *   get:
  *     summary: Get application status history
  *     description: Retrieve all status changes of a specific application. Requires `view_application_history` permission.
@@ -2842,7 +2848,7 @@
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: applicationId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -2876,7 +2882,7 @@
 
 /**
  * @swagger
- * /api/application/{applicationId}:
+ * /api/application/{id}:
  *   put:
  *     summary: Change application status
  *     description: Update the status of a specific application. Requires `change_application_status` permission.
@@ -2885,7 +2891,7 @@
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: applicationId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -2913,7 +2919,7 @@
  *                   type: string
  *                   example: Application status changed successfully
  *       400:
- *         description: Invalid status or applicationId
+ *         description: Invalid status or id
  *       401:
  *         description: Unauthorized
  *       403:
@@ -2924,7 +2930,7 @@
 
 /**
  * @swagger
- * /api/application/note/{applicationId}:
+ * /api/application/note/{id}:
  *   post:
  *     summary: Add note to an application
  *     description: Add a note to a specific application. Requires `add_application_note` permission.
@@ -2933,7 +2939,7 @@
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: applicationId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -3008,7 +3014,7 @@
 
 /**
  * @swagger
- * /api/application/note/{applicationId}:
+ * /api/application/note/{id}:
  *   get:
  *     summary: Get all notes for a specific application
  *     description: Retrieves all non-deleted notes associated with a given application. Requires authentication and `view_application_note` permission.
@@ -3017,7 +3023,7 @@
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: applicationId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -3047,7 +3053,7 @@
  *                         format: date-time
  *                         example: "2025-10-20T10:30:00.000Z"
  *       400:
- *         description: No notes found for the provided applicationId.
+ *         description: No notes found for the provided id.
  *       401:
  *         description: Unauthorized – Missing or invalid authentication token.
  *       403:

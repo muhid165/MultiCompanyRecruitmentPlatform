@@ -41,6 +41,7 @@ export const viewCreateDepartment = async (
     next(error);
   }
 };
+
 export const viewUpdateDepartment = async (
   req: Request,
   res: Response,
@@ -49,7 +50,7 @@ export const viewUpdateDepartment = async (
   try {
     const userId = (req as any).user.id;
 
-    const { deptId } = req.params; // departmentId
+    const deptId = req.params.id; // departmentId
     const { name, description } = req.body;
 
     const department = await prisma.department.update({
@@ -75,6 +76,7 @@ export const viewUpdateDepartment = async (
     next(error);
   }
 };
+
 export const viewCompanyDepartments = async (
   req: Request,
   res: Response,
@@ -116,6 +118,7 @@ export const viewCompanyDepartments = async (
     next(error);
   }
 };
+
 export const deleteDepartmentById = async (
   req: Request,
   res: Response,
@@ -123,7 +126,7 @@ export const deleteDepartmentById = async (
 ) => {
   try {
     const userId = (req as any).user.id;
-    const { deptId } = req.params;
+    const deptId  = req.params.id;
     const existingDepartment = await prisma.department.findUnique({
       where: { id: deptId, isDeleted: false },
     });
@@ -151,6 +154,7 @@ export const deleteDepartmentById = async (
     next(error);
   }
 };
+
 export const viewDepartments = async (
   req: Request,
   res: Response,
@@ -174,6 +178,7 @@ export const viewDepartments = async (
     if (companyId && !name) {
       // Only companyId present → return department names only
       responseData = result.map((dept) => ({
+        id: dept.id,
         name: dept.name,
       }));
     } else if (companyId && name) {
@@ -193,5 +198,71 @@ export const viewDepartments = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const viewSearchDepartments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query, id } = req.query;
+
+    if ( !id || typeof id !== "string" || !query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const departments = await prisma.department.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { description: { contains: query, mode: "insensitive" } },
+        ],
+        companyId: id,
+        isDeleted: false,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return res.status(200).json({
+      departments,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const viewDeleteBulkDepartments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const ids: string[] = req.body.ids;
+    const userId = (req as any).user.userId;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided for deletion" });
+    }
+
+    await prisma.department.updateMany({
+      where: { id: { in: ids } },
+      data: { isDeleted: true, deletedAt: new Date() },
+    });
+
+    for (const id of ids) {
+      await logActivity({
+        userId: userId,
+        action: ActivityLogType.DELETED,
+        entityType: EntityType.DEPARTMENT,
+        entityId: id,
+        description: `Deleted Bulk Department ids`,
+      });
+    }
+
+    return res.status(200).json({ message: "Departments Deleted successfully" });
+  } catch (err) {
+    next(err);
   }
 };

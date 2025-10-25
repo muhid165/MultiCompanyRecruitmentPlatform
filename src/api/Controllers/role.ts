@@ -4,9 +4,10 @@ import path from "path";
 import fs from "fs";
 import prisma from "../../Config/prisma";
 // import addSheetWithStyles from "../../utils/stylesheet";
-import { UserType } from "@prisma/client";
+import { ActivityLogType, EntityType, UserType } from "@prisma/client";
 import { normalizeQuery } from "../../Utils/normalizeQuery";
 import { buildPrismaFilters } from "../../Utils/buildPrismaFilters";
+import { logActivity } from "../../Utils/activityLog";
 // import { auditLog } from "../../utils/audit";   // create own log
 
 /**
@@ -31,7 +32,13 @@ export const viewCreateRole = async (
       },
     });
 
-    // await auditLog(userId, role.id, AuditLogType.CREATE, EntityType.ROLE, null);
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.CREATED,
+      entityType: EntityType.ROLE,
+      entityId: role.id,
+      description: `Created a Role`,
+    });
 
     return res.status(201).json({ message: "Role Created", role });
   } catch (err) {
@@ -65,14 +72,13 @@ export const viewUpdateRole = async (
       },
     });
 
-    // await auditLog(
-    //   userId,
-    //   updated.id,
-    //   AuditLogType.UPDATE,
-    //   EntityType.ROLE,
-    //   null
-    // );
-
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.UPDATED,
+      entityType: EntityType.ROLE,
+      entityId: updated.id,
+      description: `Created a Role`,
+    });
     return res.status(200).json({ message: "Role Updated", role: updated });
   } catch (err) {
     next(err);
@@ -184,6 +190,35 @@ export const viewSearchRoles = async (
     next(err);
   }
 };
+export const viewSearchAllRoles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || typeof query !== "string" || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const roles = await prisma.role.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { code: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return res.status(200).json({
+      roles,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 /**
  * Get Role by ID
@@ -232,7 +267,12 @@ export const viewDeleteRole = async (
       where: { id: roleId },
     });
 
-    // await auditLog(userId, role.id, AuditLogType.DELETE, EntityType.ROLE, null);
+    await logActivity({
+      userId: userId,
+      action: ActivityLogType.DELETED,
+      entityType: EntityType.ROLE,
+      description: `Deleted a Role`,
+    });
 
     return res.status(200).json({ message: "Role deleted successfully" });
   } catch (err) {
@@ -241,7 +281,7 @@ export const viewDeleteRole = async (
 };
 
 /**
- * !Soft Delete Roles (Bulk)
+ *  Delete Roles (Bulk)
  */
 export const viewDeleteBulkRoles = async (
   req: Request,
@@ -261,10 +301,16 @@ export const viewDeleteBulkRoles = async (
     });
 
     for (const id of ids) {
-      //   await auditLog(userId, id, AuditLogType.DELETE, EntityType.ROLE, null);
+      await logActivity({
+        userId: userId,
+        action: ActivityLogType.DELETED,
+        entityType: EntityType.ROLE,
+        entityId: id,
+        description: `Deleted Bulk Roles ids`,
+      });
     }
 
-    return res.status(200).json({ message: "Roles Deleted" });
+    return res.status(200).json({ message: "Roles Bulk Deleted" });
   } catch (err) {
     next(err);
   }
@@ -317,13 +363,13 @@ export const viewBulkCreateRoles = async (
           select: { id: true, code: true, name: true },
         });
 
-        // await auditLog(
-        //   userId,
-        //   created.id,
-        //   AuditLogType.CREATE,
-        //   EntityType.ROLE,
-        //   null
-        // );
+        await logActivity({
+          userId: userId,
+          action: ActivityLogType.CREATED,
+          entityType: EntityType.ROLE,
+          description: `Created Bulk Roles`,
+        });
+
         rowsCreated.push(created);
       } catch (e: any) {
         invalidRows.push({ row: r, error: e?.message || "Invalid data" });
