@@ -16,7 +16,7 @@ import roleRoutes from "./api/Routes/role";
 import analyticsRoutes from "./api/Routes/analytics"
 import reportRoutes from "./api/Routes/report"
 import assignmentRoutes from "./api/Routes/assignment"
-import { errorHandler } from "./Utils/errorHandler";
+import { errorHandler } from "./Utils/errorHandler";  
 import path from "path";
 const app = express();
 

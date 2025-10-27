@@ -25,10 +25,10 @@ router.get("/search", isAuthenticated, hasPermission("view_application"), viewSe
 router.get("/note/:id", isAuthenticated, hasPermission("view_application_note"), viewApplicationNotes);
 router.get("/", isAuthenticated, hasPermission("view_application"), viewCompanyApplications); 
 router.post("/note/:id", isAuthenticated, hasPermission("add_application_note"), validate(applicationNoteSchema), viewCreateApplicationNote);
-router.put("/:id", isAuthenticated, hasPermission("change_application_status"),validate(applicationStatusSchema), viewChangeApplicationStatus);
+router.put("/:id", isAuthenticated, hasPermission("edit_application_status"),validate(applicationStatusSchema), viewChangeApplicationStatus);
 
-router.delete("/:id", isAuthenticated, hasPermission("delete_application"), viewDeleteApplication); // new 
 router.delete("/bulk", isAuthenticated, hasPermission("delete_application"),validate(bulkDeleteSchema), viewDeleteBulkApplications); // new 
+router.delete("/:id", isAuthenticated, hasPermission("delete_application"), viewDeleteApplication); // new 
 router.delete("/note/:id", isAuthenticated, hasPermission("delete_application_note"), deleteApplicationNote);
 
 router.post("/submit", fileUpload, validate(applicationSchema), viewCreateApplication); //open api

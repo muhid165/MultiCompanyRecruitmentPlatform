@@ -12,7 +12,7 @@ router.get("/search", isAuthenticated, hasPermission("view_users"), viewSearchUs
 router.get("/:id", isAuthenticated, hasPermission("view_user"), viewUserById);
 router.put("/:id", isAuthenticated, hasPermission("edit_users"), viewUpdateUser);
 router.put("/assing/:id", isAuthenticated, hasPermission("edit_user_role"), assingRole);
-router.delete("/:id", isAuthenticated, hasPermission("delete_users"), deleteUser);
 router.delete("/bulk", isAuthenticated, hasPermission("delete_users"), validate(bulkDeleteSchema), viewDeleteBulkUsers);
+router.delete("/:id", isAuthenticated, hasPermission("delete_users"), deleteUser);
 
 export default router;

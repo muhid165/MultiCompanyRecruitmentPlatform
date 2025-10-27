@@ -4,10 +4,11 @@ import path from "path";
 import fs from "fs";
 import prisma from "../../Config/prisma";
 // import addSheetWithStyles from "../../utils/stylesheet";
-import { ActivityLogType, EntityType, UserType } from "@prisma/client";
+import { ActivityLogType, EntityType, Role, UserType } from "@prisma/client";
 import { normalizeQuery } from "../../Utils/normalizeQuery";
 import { buildPrismaFilters } from "../../Utils/buildPrismaFilters";
 import { logActivity } from "../../Utils/activityLog";
+import { filterData } from "../../Utils/filterData";
 // import { auditLog } from "../../utils/audit";   // create own log
 
 /**
@@ -469,5 +470,49 @@ export const viewBulkExportRoles = async (
     });
   } catch (err) {
     next(err);
+  }
+};
+
+export const viewFilterRoles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    console.log("Filter roles api executed ...")
+    const { name } = req.query as {
+      name?: string;
+    };
+
+    // Step 1: Use reusable filter utility
+    const result = (await filterData({
+      model: prisma.role,
+      query: req.query,
+    })) as  Role[] 
+
+    // Step 2: Format response based on query params
+    let responseData: Partial<Role>[] = [];
+
+    if (!name) {
+      // Case 1 → Only fetch all role names
+      responseData = result.map((role) => ({
+        id: role.id,
+        name: role.name,
+      }));
+    } else if (name) {
+      // Case 2 → Fetch specific role ID and name
+      responseData = result.map((role) => ({
+        id: role.id,
+        name: role.name,
+        codename: role.code,
+      }));
+    }
+
+    return res.status(200).json({
+      message: "Filtered Roles fetched successfully",
+      data: responseData,
+    });
+  } catch (error) {
+    next(error);
   }
 };

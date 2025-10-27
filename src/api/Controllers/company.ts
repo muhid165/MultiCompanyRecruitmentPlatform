@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
-import strict from "assert/strict";
-import { string } from "zod";
 import { ActivityLogType, Company, EntityType, User } from "@prisma/client";
 import { filterData } from "./filter";
 import { logActivity } from "../../Utils/activityLog";
@@ -107,9 +105,11 @@ export const viewUpdateCompany = async (
     const { name, websiteUrl, careerPageUrl, description, location } = req.body;
 
     if (!req.file) return res.status(400).json({ message: "No File Found.." });
-    const logoUrl = `${req.protocol}://${req.get("host")}/files/${
-      req.file.filename
-    }`;
+    const logoUrl = `/files/${req.file.filename}`;
+
+    // const logoUrl = `${req.protocol}://${req.get("host")}/files/${
+    //   req.file.filename
+    // }`;
 
     const updatedCompany = await prisma.company.update({
       where: {
@@ -192,9 +192,9 @@ export const viewCompanyById = async (
         careerPageUrl: true,
         description: true,
         location: true,
-        Department: true,
-        Jobs: true,
-        Applications: true,
+        // Department: true,
+        // Jobs: true,
+        // Applications: true,
       },
       where: {
         id: companyId,

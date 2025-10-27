@@ -69,7 +69,7 @@ export const viewPermissions = async (
   next: NextFunction
 ) => {
   try {
-    const permissions = await prisma.permission.findMany({});
+    const permissions = await prisma.permission.findMany({orderBy: {codename:"asc"}});
 
     res.status(200).json(permissions);
   } catch (error) {

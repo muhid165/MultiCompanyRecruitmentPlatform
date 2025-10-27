@@ -3,7 +3,7 @@ import { validate } from "../Middlewares/validate";
 // import { generalFilter } from "../../utils/generalFilter";
 
 import { isAuthenticated } from "../Middlewares/authMiddleware";
-import { viewBulkExportRoles, viewCreateRole, viewSearchRoles, viewUpdateRole, viewRoles, viewRoleById, viewDeleteBulkRoles, viewDeleteRole, viewBulkCreateRoles, viewSearchAllRoles } from "../Controllers/role";
+import { viewBulkExportRoles, viewCreateRole, viewSearchRoles, viewUpdateRole, viewRoles, viewRoleById, viewDeleteBulkRoles, viewDeleteRole, viewBulkCreateRoles, viewSearchAllRoles, viewFilterRoles } from "../Controllers/role";
 import { roleSchema, bulkDeleteSchema } from "../../Validators/validations";
 import { upload } from "../Middlewares/multer";
 import { hasPermission } from "../Middlewares/permission";
@@ -15,6 +15,9 @@ router.get("/export", isAuthenticated, hasPermission("export_roles"), viewBulkEx
 
 // Create role
 router.post("/role", isAuthenticated, validate(roleSchema), hasPermission("add_role"), viewCreateRole);
+
+// flter API
+router.get("/filter", isAuthenticated, hasPermission("view_role"), viewFilterRoles);
 
 // Search roles
 // router.get("/search", isAuthenticated, hasPermission("view_role"), viewSearchRoles);
@@ -37,5 +40,6 @@ router.delete("/:id", isAuthenticated, hasPermission("delete_role"), viewDeleteR
 
 // Import roles
 router.post("/import", isAuthenticated, fileUpload, hasPermission("add_role"), viewBulkCreateRoles);
+
 
 export default router;

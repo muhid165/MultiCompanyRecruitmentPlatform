@@ -3,7 +3,7 @@ import { transporter } from "../Utils/emaiTransporter";
 export const sendEmail = async (
   email: string,
   fullName: string,
-  password: string
+  password: string,
 ) => {
   await transporter.sendMail({
     // from: "mueed072003@gmail.com",

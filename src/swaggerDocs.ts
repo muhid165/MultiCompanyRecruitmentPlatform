@@ -17,7 +17,7 @@
  *     description: endpoints for managing companies jobs
  *
  *   - name: Company - Applications
- *     description: endpoints for managing companies applications
+ *     description: Endpoints for managing company job applications
  *
  *   - name: Permissions
  *     description: Manage and view user and system permissions
@@ -676,7 +676,7 @@
  *         required: true
  *         description: Company ID
  *         schema:
- *           type: integer
+ *           type: stringendpoints for managing companies
  *     responses:
  *       200:
  *         description: Company deleted successfully
@@ -759,6 +759,64 @@
  *         description: Internal server error
  */
 
+/**
+ * @swagger
+ * /api/company/bulk:
+ *   delete:
+ *     summary: Bulk delete companies
+ *     description: "Soft deletes multiple companies by marking them as 'isDeleted: true' and setting 'deletedAt' timestamp. Requires delete_company permission."
+ *     tags:
+ *       - Company
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 description: Array of company IDs to delete
+ *                 items:
+ *                   type: string
+ *             required:
+ *               - ids
+ *             example:
+ *               ids:
+ *                 - "b12a4c1e-1f2a-4b8a-b812-2f3e5a2b73d9"
+ *                 - "c54b23de-5a41-4d7c-93b9-8c5d7f31ab82"
+ *     responses:
+ *       200:
+ *         description: Companies deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Companies Deleted successfully
+ *       400:
+ *         description: Bad Request — No IDs provided for deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No IDs provided for deletion
+ *       401:
+ *         description: Unauthorized — Authentication required
+ *       403:
+ *         description: Forbidden — Insufficient permissions
+ *       500:
+ *         description: Internal server error
+ */
+
+
 
 
 
@@ -836,8 +894,7 @@
  *   get:
  *     summary: Get all departments for a specific company
  *     description: Retrieve a paginated list of all non-deleted departments belonging to a given company. Requires authentication.
- *     tags:
- *       - Company - Departments
+ *     tags: [Company - Departments]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1403,7 +1460,7 @@
  *     summary: Update an existing job
  *     tags:
  *       - Company - Jobs
- *     description: Update the details of an existing job. Requires `update_company_job` permission.
+ *     description: Update the details of an existing job. Requires `edit_company_job` permission.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1452,7 +1509,7 @@
  *       401:
  *         description: Unauthorized – Missing or invalid token.
  *       403:
- *         description: Forbidden – Missing `update_company_job` permission.
+ *         description: Forbidden – Missing `edit_company_job` permission.
  *       500:
  *         description: Internal server error.
  */
@@ -1586,6 +1643,65 @@
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/job/bulk:
+ *   delete:
+ *     summary: Bulk delete jobs
+ *     description: "Soft deletes multiple jobs by marking them as 'isDeleted: true' and setting a 'deletedAt' timestamp. Requires delete_job permission."
+ *     tags:
+ *       - Company - Jobs
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 description: Array of job IDs to soft delete
+ *                 items:
+ *                   type: string
+ *             required:
+ *               - ids
+ *             example:
+ *               ids:
+ *                 - "b1f9b8d2-4a63-41d3-b0a4-1131c46a22e9"
+ *                 - "a2d7b3e9-7f54-4a2c-8e1a-bb9a7a3cf1e3"
+ *     responses:
+ *       200:
+ *         description: Jobs deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Jobs Deleted successfully
+ *       400:
+ *         description: Bad Request — No IDs provided for deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No IDs provided for deletion
+ *       401:
+ *         description: Unauthorized — Authentication required
+ *       403:
+ *         description: Forbidden — Insufficient permissions
+ *       500:
+ *         description: Internal server error
+ */
+
+
 
 
 /**
@@ -2344,6 +2460,58 @@
 
 /**
  * @swagger
+ * /api/roles/filter:
+ *   get:
+ *     summary: Filter roles
+ *     description: Returns a list of roles filtered by query parameters. If no name is provided, returns all role IDs and names. If a name is provided, returns matching roles with ID, name, and codename.
+ *     tags: [Roles]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter roles by name (optional)
+ *     responses:
+ *       200:
+ *         description: Filtered roles fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Filtered Roles fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "b41d2e4b-2a23-4b76-8b2f-c77f4e5b1234"
+ *                       name:
+ *                         type: string
+ *                         example: "Admin"
+ *                       codename:
+ *                         type: string
+ *                         example: "admin_code"
+ *       400:
+ *         description: Invalid query parameter
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ *       403:
+ *         description: Permission denied
+ *       500:
+ *         description: Internal server error
+ */
+
+
+/**
+ * @swagger
  * /api/user:
  *   get:
  *     summary: Get all users (paginated)
@@ -2554,6 +2722,65 @@
  *       500:
  *         description: Internal server error
  */
+
+/**
+ * @swagger
+ * /api/user/bulk:
+ *   delete:
+ *     summary: Bulk delete users
+ *     description: "Soft deletes multiple users by marking them as 'isDeleted: true' and setting a 'deletedAt' timestamp. Requires delete_users permission."
+ *     tags: [Admin - Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 description: Array of user IDs to soft delete
+ *                 items:
+ *                   type: string
+ *             required:
+ *               - ids
+ *             example:
+ *               ids:
+ *                 - "a12b3c4d-5678-90ef-gh12-34567890abcd"
+ *                 - "b23c4d5e-6789-01fg-hi23-45678901bcde"
+ *     responses:
+ *       200:
+ *         description: Users deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Users Deleted successfully
+ *       400:
+ *         description: Bad Request — No IDs provided for deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No IDs provided for deletion
+ *       401:
+ *         description: Unauthorized — Authentication required
+ *       403:
+ *         description: Forbidden — Insufficient permissions
+ *       500:
+ *         description: Internal server error
+ */
+
+
+
 
 /**
  * @swagger
@@ -2885,7 +3112,7 @@
  * /api/application/{id}:
  *   put:
  *     summary: Change application status
- *     description: Update the status of a specific application. Requires `change_application_status` permission.
+ *     description: Update the status of a specific application. Requires `edit_application_status` permission.
  *     tags: [Company - Applications]
  *     security:
  *       - bearerAuth: []
@@ -2923,7 +3150,7 @@
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden – Missing `change_application_status` permission
+ *         description: Forbidden – Missing `edit_application_status` permission
  *       500:
  *         description: Internal server error
  */
@@ -3064,6 +3291,83 @@
 
 /**
  * @swagger
+ * /api/application/{id}:
+ *   delete:
+ *     summary: Delete a single application
+ *     description: Soft deletes a specific application by marking it as isDeleted true and setting a deletedAt timestamp.
+ *     tags: [Company - Applications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique ID of the application to delete
+ *     responses:
+ *       200:
+ *         description: Application deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Application Deleted successfully.
+ *       400:
+ *         description: Invalid or missing parameters
+ *       404:
+ *         description: Application not found
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/application/bulk:
+ *   delete:
+ *     summary: Bulk delete multiple applications
+ *     description: Soft deletes multiple applications by marking them as isDeleted true and setting deletedAt for each. Requires a JSON body containing an array of application IDs.
+ *     tags: [Company - Applications]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["a1b2c3d4", "e5f6g7h8"]
+ *     responses:
+ *       200:
+ *         description: Applications deleted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Applications Deleted successfully
+ *       400:
+ *         description: Invalid request body (no IDs provided)
+ *       500:
+ *         description: Internal server error
+ */
+
+
+
+/**
+ * @swagger
  * /api/department/filter:
  *   get:
  *     summary: Retrieve and filter company departments
@@ -3129,6 +3433,66 @@
  *       500:
  *         description: Internal server error.
  */
+
+/**
+ * @swagger
+ * /api/department/bulk:
+ *   delete:
+ *     summary: Bulk delete departments
+ *     description: "Soft deletes multiple departments by marking them as 'isDeleted: true' and setting a 'deletedAt' timestamp. Requires delete_company_department permission."
+ *     tags: [Company - Departments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 description: Array of department IDs to soft delete
+ *                 items:
+ *                   type: string
+ *             required:
+ *               - ids
+ *             example:
+ *               ids:
+ *                 - "d1f8b8c2-4f63-46d3-a0b4-2331c46b49d2"
+ *                 - "a5e7c3b9-9f44-4d1c-9e2b-bb1a7a2cf0e5"
+ *     responses:
+ *       200:
+ *         description: Departments deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Departments Deleted successfully
+ *       400:
+ *         description: Bad Request — No IDs provided for deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: No IDs provided for deletion
+ *       401:
+ *         description: Unauthorized — Authentication required
+ *       403:
+ *         description: Forbidden — Insufficient permissions
+ *       500:
+ *         description: Internal server error
+ */
+
+
+
+
 
 /**
  * @swagger

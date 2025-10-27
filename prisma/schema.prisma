@@ -9,7 +9,7 @@ datasource db {
 
 model User {
   id           String    @id @default(uuid())
-  roleId       String?
+  roleId       String  
   fullName     String
   email        String    @unique
   password     String
@@ -28,7 +28,7 @@ model User {
   ApplicationHistories ApplicationHistory[]
   UserPermissions      UserPermission[]
   GroupMember          GroupMember[]
-  Role                 Role?                @relation(fields: [roleId], references: [id])
+  Role                 Role                @relation(fields: [roleId], references: [id])
   TenantAssingment     TenantAssingment[]
 }
 
@@ -113,7 +113,7 @@ model Company {
   Applications      Application[]
   Department        Department[]
   Role              Role[]
-  roleId            String?
+  // roleId            String?
   TenantAssingments TenantAssingment[]
 }
 

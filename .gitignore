@@ -4,3 +4,4 @@ dist/
 .prettierrc
 
 /src/generated/prisma
+/prisma/seed2.ts

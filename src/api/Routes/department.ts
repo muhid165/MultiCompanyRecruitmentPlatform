@@ -19,8 +19,8 @@ router.get("/filter", isAuthenticated, hasPermission("view_company_department"),
 router.get("/search", isAuthenticated, hasPermission("view_company_department"), viewSearchDepartments);
 router.get("/", isAuthenticated, hasPermission("view_company_department"), viewCompanyDepartments);
 router.post("/", isAuthenticated, hasPermission("add_company_department"), validate(departmentSchema), viewCreateDepartment);
-router.put("/:id", isAuthenticated, hasPermission("update_company_department"), validate(departmentSchema), viewUpdateDepartment);
-router.delete("/:id", isAuthenticated, hasPermission("delete_company_department"), deleteDepartmentById);
+router.put("/:id", isAuthenticated, hasPermission("edit_company_department"), validate(departmentSchema), viewUpdateDepartment);
 router.delete("/bulk", isAuthenticated, hasPermission("delete_company_department"), validate(bulkDeleteSchema), viewDeleteBulkDepartments); // new
+router.delete("/:id", isAuthenticated, hasPermission("delete_company_department"), deleteDepartmentById);
 
 export default router;

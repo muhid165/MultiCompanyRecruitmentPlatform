@@ -63,7 +63,8 @@ export const registerUser = async (
   email: string,
   fullName: string,
   password: string,
-  phone: string
+  phone: string,
+  roleId: string
 ) => {
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -84,24 +85,25 @@ export const registerUser = async (
   const hashedPassword = await hashPassword(password);
 
   const user = await prisma.user.create({
-    select: {
-      id: true,
-      roleId: true,
-      fullName: true,
-      email: true,
-      phone: true,
-      companyId: true,
-      UserPermissions: {
-        include: { Permission: { select: { codename: true } } },
-      },
-      GroupMember: { select: { groupId: true } },
+    // select: {
+    //   id: true,
+    //   roleId: true,
+    //   fullName: true,
+    //   email: true,
+    //   phone: true,
+    //   companyId: true,
+    //   UserPermissions: {
+    //     include: { Permission: { select: { codename: true } } },
+    //   },
+    //   GroupMember: { select: { groupId: true } },
       
-    },
+    // },
     data: {
       fullName,
       email,
       password: hashedPassword,
       phone,
+      roleId
     },
   });
 
