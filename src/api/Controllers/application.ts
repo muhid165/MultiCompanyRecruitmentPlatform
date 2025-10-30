@@ -5,11 +5,17 @@ import { logActivity } from "../../Utils/activityLog";
 import { ActivityLogType, EntityType } from "@prisma/client";
 
 //APPLICATION
-export const viewCreateApplication = async (
+export const viewCreateApplication = async (  // updated this controller to get ID from the token 
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  const companyId = req.companyId;
+  if (!companyId) {   // throw new Error here 
+    return res
+      .status(400)
+      .json({ message: "Invalid token: missing company ID" });
+  }
   if (!req.file)
     throw new Error(
       "Application error: Resume file is missing. Please upload a resume."
@@ -20,7 +26,6 @@ export const viewCreateApplication = async (
   try {
     const {
       jobId,
-      companyId,
       candidateName,
       email,
       phone,
@@ -40,9 +45,8 @@ export const viewCreateApplication = async (
     if (typeof experience === "string") {
       try {
         experienceData = JSON.parse(experience);
-      } catch {
-        console.warn("Invalid experience format");
-        experienceData = [];
+      } catch (err) {
+        throw new Error("Invalid format for experience. Must be valid JSON.");
       }
     }
     const newApplication = await prisma.application.create({
@@ -65,7 +69,7 @@ export const viewCreateApplication = async (
       where: { id: companyId },
     });
     const companyName = company?.name || "";
-    sendApplicationMail(email, candidateName, companyName);
+    await sendApplicationMail(email, candidateName, companyName);
 
     return res.status(201).json({
       message: "Application created successfully",
@@ -86,41 +90,47 @@ export const viewCompanyApplications = async (
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
-    const applications = await prisma.application.findMany({
-      where: {
-        companyId: companyId as string,
-        isDeleted: false,
-      },
-      include: {
-        Notes: {
-          select: {
-            userId: true,
-            note: true,
-          },
-        },
-        History: {
-          select: {
-            oldStatus: true,
-            newStatus: true,
-            changeById: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-    });
 
-    const total = await prisma.application.count({
-      where: { companyId: companyId as string, isDeleted: false },
-    });
-    if (total <= 0)
+    if (!companyId || typeof companyId !== "string") {
+      return res.status(400).json({ message: "Missing or invalid companyId." });
+    }
+
+    const [applications, total] = await Promise.all([
+      prisma.application.findMany({
+        where: {
+          companyId,
+          isDeleted: false,
+        },
+        include: {
+          Notes: {
+            select: {
+              userId: true,
+              note: true,
+            },
+          },
+          History: {
+            select: {
+              oldStatus: true,
+              newStatus: true,
+              changeById: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.application.count({
+        where: { companyId, isDeleted: false },
+      }),
+    ]);
+    if (total === 0)
       return res.status(404).json({
-        message: "No Applications found",
+        message: "No Applications found for this company",
       });
 
     return res.status(200).json({
-      message: "All Applications of company",
+      message: " Applications fetched successfully",
       page,
       tatalPages: Math.ceil(total / limit),
       totalItems: total,
@@ -131,55 +141,182 @@ export const viewCompanyApplications = async (
   }
 };
 
-export const viewChangeApplicationStatus = async (
+export const viewUpdateApplication = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const applicationId = req.params.id; // application ID
-    const userId = (req as any).user.id;
-    const { status } = req.body;
+    // console.log("this is the body : ", req.body);
+    const userId = (req as any).user?.id;
+    const applicationId = req.params.id;
+    const {
+      jobId,
+      companyId,
+      candidateName,
+      email,
+      phone,
+      experience,
+      skills,
+      currentCTC,
+      expectedCTC,
+      noticePeriod,
+      status,
+      source,
+      resumeUrl: bodyResumeUrl, // Optional existing resume URL from frontend
+    } = req.body;
 
-    const application = await prisma.application.findUnique({
+    const existingApplication = await prisma.application.findUnique({
       where: { id: applicationId },
     });
-    if (!application) throw new Error("No application found");
 
-    const updatedApplication = await prisma.application.update({
-      where: { id: applicationId },
-      data: {
-        status: status,
-      },
-    });
+    if (!existingApplication) {
+      return res.status(404).json({ message: "Application not found." });
+    }
 
-    const applicationHistory = await prisma.applicationHistory.create({
-      data: {
-        applicationId: applicationId,
-        oldStatus: application.status,
-        newStatus: status,
-        changeById: userId,
-      },
-    });
+    let resumeUrl = existingApplication.resumeUrl;
 
+    if (req.file) {
+      resumeUrl = `${req.protocol}://${req.get("host")}/files/${
+        req.file.filename
+      }`;
+    } else if (bodyResumeUrl && bodyResumeUrl.trim() !== "") {
+      resumeUrl = bodyResumeUrl.trim();
+    }
+
+    let skillsArray = skills;
+    if (typeof skills === "string") {
+      skillsArray = skills.split(",").map((s) => s.trim());
+    }
+
+    let experienceData = experience;
+    if (typeof experience === "string") {
+      try {
+        experienceData = JSON.parse(experience);
+      } catch (err) {
+        throw new Error("Invalid format for experience. Must be valid JSON.");
+      }
+    }
+
+    // ✅ Update directly since frontend sends all fields
+    // const updatedApplication = await prisma.application.update({
+    //   where: { id: applicationId },
+    //   data: {
+    //     jobId,
+    //     companyId,
+    //     candidateName,
+    //     email,
+    //     phone,
+    //     resumeUrl,
+    //     experience: experienceData,
+    //     skills: skillsArray,
+    //     currentCTC,
+    //     expectedCTC,
+    //     noticePeriod,
+    //     status,
+    //     source,
+    //   },
+    // });
+
+    const [updatedApplication, historyEntry] = await prisma.$transaction([
+      prisma.application.update({
+        where: { id: applicationId },
+        data: {
+          jobId,
+          companyId,
+          candidateName,
+          email,
+          phone,
+          resumeUrl,
+          experience: experienceData,
+          skills: skillsArray,
+          currentCTC,
+          expectedCTC,
+          noticePeriod,
+          status,
+          source,
+        },
+      }),
+      prisma.applicationHistory.create({
+        data: {
+          applicationId,
+          oldStatus: existingApplication.status,
+          newStatus: status,
+          changeById: userId,
+        },
+      }),
+    ]);
+
+    // ✅ Log update
     await logActivity({
-      userId: userId,
+      userId,
       action: ActivityLogType.UPDATED,
       entityType: EntityType.APPLICATION,
       entityId: applicationId,
-      description: `changed application status to ${status}`,
-      changes: { applicationId: applicationId, status: status },
+      description: `Updated application for candidate "${updatedApplication.candidateName}".`,
+      changes: { applicationId },
     });
 
-    return res
-      .status(200)
-      .json({ message: "Application status changed successfully " });
+    return res.status(200).json({
+      message: "Application updated successfully",
+      data: updatedApplication,
+    });
   } catch (error) {
+    console.error("Error updating application:", error);
     next(error);
   }
 };
 
+// export const viewChangeApplicationStatus = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const applicationId = req.params.id; // application ID
+//     const userId = (req as any).user?.id;
+//     const { status } = req.body;
+
+//     const application = await prisma.application.findUnique({
+//       where: { id: applicationId },
+//     });
+//     if (!application) throw new Error("No application found");
+
+//     const [updatedApplication, historyEntry] = await prisma.$transaction([
+//       prisma.application.update({
+//         where: { id: applicationId },
+//         data: { status },
+//         select: { id: true, status: true },
+//       }),
+//       prisma.applicationHistory.create({
+//         data: {
+//           applicationId,
+//           oldStatus: application.status,
+//           newStatus: status,
+//           changeById: userId,
+//         },
+//       }),
+//     ]);
+
+//     await logActivity({
+//       userId: userId,
+//       action: ActivityLogType.UPDATED,
+//       entityType: EntityType.APPLICATION,
+//       entityId: applicationId,
+//       description: `Application status changed from ${application.status} to ${status}.`,
+//       changes: { applicationId: applicationId, status: status },
+//     });
+
+//     return res
+//       .status(200)
+//       .json({ message: "Application status changed successfully " });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 //APPLICATION HISTORY
+
 export const viewApplicationHistory = async (
   req: Request,
   res: Response,
@@ -187,12 +324,23 @@ export const viewApplicationHistory = async (
 ) => {
   try {
     const applicationId = req.params.id;
+    if (!applicationId || typeof applicationId !== "string") {
+      return res
+        .status(400)
+        .json({ message: "Invalid or missing application ID." });
+    }
     const history = await prisma.applicationHistory.findMany({
       where: {
-        applicationId: applicationId,
+        applicationId,
       },
-      orderBy: { id: "asc" },
+      orderBy: { changedAt: "asc" },
     });
+
+    if (!history || history.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No history found for this application." });
+    }
     return res.status(200).json({ history });
   } catch (error) {
     next(error);
@@ -206,12 +354,13 @@ export const viewCreateApplicationNote = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const applicationId = req.params.id;
     const { note } = req.body;
+
     const applicatioNote = await prisma.applicationNote.create({
       data: {
-        applicationId: applicationId,
+        applicationId,
         userId,
         note,
       },
@@ -225,7 +374,9 @@ export const viewCreateApplicationNote = async (
       description: `application note created`,
       changes: { applicationId: applicationId, note: note },
     });
-    return res.status(200).json({ message: "Note created ", applicatioNote });
+    return res
+      .status(200)
+      .json({ message: "Note created successfully", applicatioNote });
   } catch (error) {
     next(error);
   }
@@ -237,7 +388,7 @@ export const deleteApplicationNote = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const noteId = req.params.id;
     const note = await prisma.applicationNote.findUnique({
       where: { id: noteId, isDeleted: false },
@@ -274,15 +425,25 @@ export const viewApplicationNotes = async (
   next: NextFunction
 ) => {
   try {
-    const applicationid = req.params.id;
-    const notes = await prisma.applicationNote.findMany({
-      select: { userId: true, note: true, createdAt: true },
-      where: { applicationId: applicationid, isDeleted: false },
-    });
-    if (!notes)
+    const applicationId = req.params.id;
+
+    if (!applicationId || typeof applicationId !== "string") {
       return res
         .status(400)
-        .json({ message: "No Notes found with applicationId" });
+        .json({ message: "Invalid or missing application ID." });
+    }
+
+    const notes = await prisma.applicationNote.findMany({
+      select: { userId: true, note: true, createdAt: true },
+      where: { applicationId: applicationId, isDeleted: false },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (notes.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No notes found for this application." });
+    }
 
     return res.status(200).json({ data: notes });
   } catch (error) {
@@ -337,7 +498,7 @@ export const viewDeleteApplication = async (
 ) => {
   try {
     const applicationId = req.params.id;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     const application = await prisma.application.findUnique({
       where: {
@@ -345,13 +506,15 @@ export const viewDeleteApplication = async (
       },
     });
 
-    if (!application) throw new Error("No Application Found.");
-
+    if (!application) throw new Error("Application not found.");
+    if (application.isDeleted) {
+      return res.status(400).json({ message: "Application already deleted." });
+    }
     await prisma.application.update({
       where: {
         id: applicationId,
       },
-      data: { isDeleted: true , deletedAt: new Date()},
+      data: { isDeleted: true, deletedAt: new Date() },
     });
 
     await logActivity({
@@ -377,7 +540,7 @@ export const viewDeleteBulkApplications = async (
 ) => {
   try {
     const ids: string[] = req.body.ids;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No IDs provided for deletion" });
@@ -403,5 +566,33 @@ export const viewDeleteBulkApplications = async (
       .json({ message: "Applications Deleted successfully" });
   } catch (err) {
     next(err);
+  }
+};
+
+export const viewApplicationById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const applicationId = req.params.id;
+
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      include: {
+        Notes: true,
+        History: true,
+      },
+    });
+
+    if (!application)
+      return res.status(400).json({ message: "no Application Found " });
+
+    return res.status(200).json({
+      message: " Applications fetched successfully",
+      application,
+    });
+  } catch (error) {
+    next(error);
   }
 };

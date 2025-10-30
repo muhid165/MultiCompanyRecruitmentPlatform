@@ -9,7 +9,7 @@ export const viewLoggedUserPermission = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
 
     // Fetch user-specific and group-based permissions
     const [userPermissions, groupMemberships] = await Promise.all([
@@ -141,7 +141,7 @@ export const viewDeleteUserPermissions = async (
   next: NextFunction
 ) => {
   try {
-    const loggedInUserId = (req as any).user.id;
+    const loggedInUserId = (req as any).user?.id;
 
     const { userId } = req.params;
     const { permissionIds } = req.body;

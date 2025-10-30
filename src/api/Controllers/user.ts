@@ -32,6 +32,7 @@ export const viewAllUsers = async (
       },
       skip,
       take: limit,
+      orderBy:{ fullName:'asc'}
     });
 
     const total = await prisma.user.count({ where: { isDeleted: false } });
@@ -91,9 +92,9 @@ export const viewUpdateUser = async (
 ) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
 
-    const { fullName, email, phone, companyId, role } = req.body;
+    const { fullName, email, phone, companyId, roleId } = req.body;
     const user = await prisma.user.findUnique({
       where: {
         id: id,
@@ -101,10 +102,6 @@ export const viewUpdateUser = async (
       },
     });
     if (!user) throw new Error("No user found with ID");
-    const existingRole = await prisma.role.findFirst({
-      where: { code: role },
-    });
-    if (!existingRole) throw new Error("No Role found with Code");
 
     const updatedUser = await prisma.user.update({
       select: {
@@ -120,14 +117,14 @@ export const viewUpdateUser = async (
         },
       },
       where: { id: id },
-      data: { fullName, email, phone, companyId, roleId: existingRole.id },
+      data: { fullName, email, phone, companyId, roleId },
     });
 
     await logActivity({
       userId: userId,
       action: ActivityLogType.UPDATED,
       entityType: EntityType.USER,
-      entityId: user.id,
+      entityId: user?.id,
       description: `Updated a User`,
     });
 
@@ -144,7 +141,7 @@ export const deleteUser = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { id } = req.params;
     const user = await prisma.user.findUnique({
       where: {
@@ -167,7 +164,7 @@ export const deleteUser = async (
       userId: userId,
       action: ActivityLogType.DELETED,
       entityType: EntityType.USER,
-      entityId: user.id,
+      entityId: user?.id,
       description: `Deleted a User`,
     });
 
@@ -184,7 +181,7 @@ export const assingRole = async (
   try {
     const { id } = req.params;
     const { roleId } = req.body;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
 
     const role = await prisma.role.findUnique({
       where: { id: roleId },
@@ -207,7 +204,7 @@ export const assingRole = async (
       userId: userId,
       action: ActivityLogType.UPDATED,
       entityType: EntityType.USER,
-      entityId: user.id,
+      entityId: user?.id,
       description: `Assigned a Role to a user`,
     });
 
@@ -262,7 +259,7 @@ export const viewDeleteBulkUsers = async (
 ) => {
   try {
     const ids: string[] = req.body.ids;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No IDs provided for deletion" });

@@ -33,7 +33,7 @@ export const viewRegister = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { fullName, email, phone, roleId } = req.body;
     const tempPassword = Math.random().toString(36).slice(-8);
     console.log(`This is the password for ${fullName}:  ${tempPassword}`)
@@ -44,7 +44,7 @@ export const viewRegister = async (
       userId: userId,
       action: ActivityLogType.CREATED,
       entityType: EntityType.USER,
-      entityId: user.id,
+      entityId: user?.id,
       description: `Registered a User`,
       changes: { fulName: fullName, email: email },
     });
@@ -62,7 +62,7 @@ export const viewProfile = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const user = await prisma.user.findUnique({
       select: {
         fullName: true,

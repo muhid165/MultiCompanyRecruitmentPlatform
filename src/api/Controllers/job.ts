@@ -10,7 +10,7 @@ export const viewCreateJob = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { companyId } = req.query;
     const {
       department,
@@ -68,11 +68,11 @@ export const viewUpdateJob = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { jobId } = req.params;
     const {
-      departmentId,
       title,
+      departmentId,
       location,
       experience,
       salaryRange,
@@ -235,7 +235,7 @@ export const viewDeleteJob = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { jobId } = req.params; // jobId
     const job = await prisma.job.findUnique({
       where: {
@@ -271,7 +271,7 @@ export const viewPublishJob = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { jobId } = req.params; // jobId
     const job = await prisma.job.findUnique({
       where: { id: jobId },
@@ -388,7 +388,7 @@ export const viewDeleteBulkjobs = async (
 ) => {
   try {
     const ids: string[] = req.body.ids;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No IDs provided for deletion" });

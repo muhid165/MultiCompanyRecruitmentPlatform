@@ -9,16 +9,16 @@ export const viewCreateAssignment = async (
   next: NextFunction
 ) => {
   try {
-    const loggedInUserId = (req as any).user.id;
+    const loggedInUserId = (req as any).user?.id;
     const { companyId, userId } = req.body;
 
-    const companyExists = await prisma.company.findUnique({
-      where: { id: companyId },
-    });
-    if (!companyExists) throw new Error("Company not Found");
+    // const companyExists = await prisma.company.findUnique({
+    //   where: { id: companyId },
+    // });
+    // if (!companyExists) throw new Error("Company not Found");
 
-    const userExists = await prisma.user.findUnique({ where: { id: userId } });
-    if (!userExists) throw new Error("User not found");
+    // const userExists = await prisma.user.findUnique({ where: { id: userId } });
+    // if (!userExists) throw new Error("User not found");
 
     const existing = await prisma.tenantAssingment.findFirst({
       where: { companyId, userId },
@@ -61,7 +61,7 @@ export const viewUpdateAssignment = async (
   next: NextFunction
 ) => {
   try {
-    const loggedInUserId = (req as any).user.id;
+    const loggedInUserId = (req as any).user?.id;
 
     const { id } = req.params;
     const { companyId, userId } = req.body;
@@ -172,7 +172,7 @@ export const viewDeleteAssignment = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { id } = req.params;
 
     const assignment = await prisma.tenantAssingment.findUnique({

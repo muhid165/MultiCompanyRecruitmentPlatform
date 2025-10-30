@@ -30,7 +30,9 @@ export const viewAllCompanies = async (
       },
       skip,
       take: limit,
+      orderBy: { createdAt: "desc" },
     });
+
     const total = await prisma.company.count({ where: { isDeleted: false } });
     if (total <= 0)
       return res.status(404).json({
@@ -52,14 +54,13 @@ export const viewCreateCompany = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { name, websiteUrl, careerPageUrl, location, description } = req.body;
 
     // logoUrl will be fileupload path
-    if (!req.file) return res.status(400).json({ message: "No File Found.." });
-    const logoUrl = `${req.protocol}://${req.get("host")}/files/${
-      req.file.filename
-    }`;
+    if (!req.file)
+      return res.status(400).json({ message: "Logo file is required.." });
+    const logoUrl = `/files/${req.file.filename}`;
 
     const existingCareerPage = await prisma.company.findUnique({
       where: {
@@ -68,7 +69,7 @@ export const viewCreateCompany = async (
     });
 
     if (existingCareerPage)
-      throw new Error("No duplicate CareerPageUrl's allowed.");
+      throw new Error("Career Page URL already exists for another company.");
 
     const company = await prisma.company.create({
       data: {
@@ -85,11 +86,13 @@ export const viewCreateCompany = async (
       userId: userId,
       action: ActivityLogType.CREATED,
       entityType: EntityType.COMPANY,
-      description: `Created a compamny `,
+      description: `Created company "${company.name}".`,
       changes: { companyId: company.id },
     });
 
-    return res.status(201).json({ message: "Company created successfully." });
+    return res
+      .status(201)
+      .json({ message: "Company created successfully.", company });
   } catch (error) {
     next(error);
   }
@@ -100,16 +103,50 @@ export const viewUpdateCompany = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const companyId = req.params.id;
-    const { name, websiteUrl, careerPageUrl, description, location } = req.body;
+    const {
+      name,
+      websiteUrl,
+      careerPageUrl,
+      description,
+      location,
+      logoUrl: bodyLogoUrl,
+    } = req.body;
 
-    if (!req.file) return res.status(400).json({ message: "No File Found.." });
-    const logoUrl = `/files/${req.file.filename}`;
+    const existingCompany = await prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!existingCompany) {
+      return res.status(404).json({ message: "Company not found." });
+    }
+
+    let logoUrl: string | undefined = existingCompany.logoUrl ?? undefined;
+
+    if (req.file) {
+      // Case 1: new file uploaded
+      logoUrl = `/files/${req.file.filename}`;
+    } else if (bodyLogoUrl && bodyLogoUrl.trim() !== "") {
+      // Case 2: body contains existing logo URL
+      logoUrl = bodyLogoUrl.trim();
+    }
+    // } else {
+    //   // Case 3: nothing sent → keep existing
+    //   logoUrl = existingCompany.logoUrl;
+    // }
 
     // const logoUrl = `${req.protocol}://${req.get("host")}/files/${
     //   req.file.filename
     // }`;
+
+    if (careerPageUrl && careerPageUrl !== existingCompany.careerPageUrl) {
+      const duplicate = await prisma.company.findUnique({
+        where: { careerPageUrl },
+      });
+      if (duplicate)
+        throw new Error("Career Page URL already exists for another company.");
+    }
 
     const updatedCompany = await prisma.company.update({
       where: {
@@ -118,7 +155,7 @@ export const viewUpdateCompany = async (
       data: {
         name,
         websiteUrl,
-        logoUrl: logoUrl,
+        logoUrl,
         careerPageUrl,
         description,
         location,
@@ -129,14 +166,15 @@ export const viewUpdateCompany = async (
       userId: userId,
       action: ActivityLogType.UPDATED,
       entityType: EntityType.COMPANY,
-      description: `Updated a company`,
+      description: `Updated company "${updatedCompany.name}".`,
       changes: { companyId: companyId },
     });
 
     return res
-      .status(201)
+      .status(200)
       .json({ message: "Company updated successfully.", updatedCompany });
   } catch (error) {
+    console.log("Error: ", error);
     next(error);
   }
 };
@@ -146,7 +184,7 @@ export const deleteCompany = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const companyId = req.params.id;
     const company = await prisma.company.findUnique({
       where: {
@@ -176,7 +214,6 @@ export const deleteCompany = async (
     next(error);
   }
 };
-// no need till now
 export const viewCompanyById = async (
   req: Request,
   res: Response,
@@ -192,6 +229,13 @@ export const viewCompanyById = async (
         careerPageUrl: true,
         description: true,
         location: true,
+        _count: {
+          select: {
+            Department: true,
+            Jobs: true,
+            Applications: true,
+          },
+        },
         // Department: true,
         // Jobs: true,
         // Applications: true,
@@ -212,7 +256,7 @@ export const assingCompanyAdmins = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { companyId } = req.query;
     const { roleId, adminIds } = req.body;
 
@@ -315,7 +359,7 @@ export const viewDeleteBulkCompanies = async (
 ) => {
   try {
     const ids: string[] = req.body.ids;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No IDs provided for deletion" });

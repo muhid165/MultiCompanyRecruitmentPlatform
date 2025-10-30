@@ -6,4 +6,5 @@ export const JWTSECRET = process.env.JWTSECRET || "uifgv2345#%^67%ZXFHGF5#$@ghF2
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || "gfuyFGJH&*%$%^#dfhgFU^*erdf1473";
 export const E_USER = process.env.EMAIL_USER!;
 export const E_PASS = process.env.EMAIL_PASS!;
+export const COMPANY_TOKEN_SECRET = process.env.JWT_SECRET!;
 

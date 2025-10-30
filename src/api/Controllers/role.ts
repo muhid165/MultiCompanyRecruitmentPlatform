@@ -20,14 +20,14 @@ export const viewCreateRole = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.userId;
-    const { code, name, roleType, description, companyId } = req.body;
+    const userId = (req as any).user?.id;
+    const { code, name, description, companyId } = req.body;
 
     const role = await prisma.role.create({
       data: {
         code,
         name,
-        roleType: roleType as UserType | null,
+        // roleType: roleType as UserType | null,
         description: description ?? null,
         companyId: companyId ?? null,
       },
@@ -57,7 +57,7 @@ export const viewUpdateRole = async (
 ) => {
   try {
     const roleId = req.params.id;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
     const { code, name, roleType, description, companyId } = req.body;
 
     const updated = await prisma.role.update({
@@ -262,7 +262,7 @@ export const viewDeleteRole = async (
 ) => {
   try {
     const roleId = req.params.id;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     const role = await prisma.role.delete({
       where: { id: roleId },
@@ -291,7 +291,7 @@ export const viewDeleteBulkRoles = async (
 ) => {
   try {
     const ids: string[] = req.body.ids;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No IDs provided for deletion" });
@@ -330,7 +330,7 @@ export const viewBulkCreateRoles = async (
     if (!req.file)
       return res.status(400).json({ message: "File not provided" });
 
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     // Basic CSV/Excel parse via ExcelJS (accepts .xlsx recommended)
     const wb = new ExcelJS.Workbook();
@@ -479,7 +479,6 @@ export const viewFilterRoles = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    console.log("Filter roles api executed ...")
     const { name } = req.query as {
       name?: string;
     };

@@ -38,11 +38,6 @@ export const sendApplicationMail = async (
     We have received your application and our recruitment team will review your profile shortly.  
     If your qualifications match our requirements, we will get in touch with you for the next steps in the process.
 
-    What happens next?
-    - Our hiring team will review your application.
-    - If shortlisted, you will hear from us within [X] days.
-    - If not selected, we will still inform you via email.
-
     In the meantime, feel free to reach out if you have any questions.
     
     Best regards,  

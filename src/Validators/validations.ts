@@ -22,14 +22,16 @@ export const roleSchema = z.object({
   description: z.string().optional(),
 });
 
+
 export const bulkDeleteSchema = z.object({
   ids: z
-    .array(z.string().min(1, { message: "ID cannot be empty" }))
+    .array(z.uuid().min(1, { message: "ID cannot be empty" }))
     .nonempty({ message: "At least one ID is required for bulk deletion" }),
 });
 
+
 export const userSchema = z.object({
-  roleId: z.string().optional(),
+  roleId: z.uuid().optional(),
   email: z.email({ message: "Invalid email address" }),
   fullName: z
     .string()
@@ -44,6 +46,7 @@ export const userSchema = z.object({
         "Phone number must be a valid 10-digit Indian number (e.g. 9876543210)",
     }),
 });
+
 
 export const companySchema = z.object({
   name: z
@@ -67,8 +70,9 @@ export const companySchema = z.object({
     .enum(Object.values(CompanyStatus) as [string, ...string[]])
     .default("ACTIVE"),
   isDeleted: z.boolean().default(false),
-  roleId: z.string().optional(),
+  roleId: z.uuid().optional(),
 });
+
 
 export const departmentSchema = z.object({
   name: z
@@ -82,6 +86,7 @@ export const departmentSchema = z.object({
     .max(300, { message: "Description must not exceed 300 characters" })
     .optional(),
 });
+
 
 export const jobSchema = z.object({
   department: z.string(),
@@ -124,9 +129,15 @@ export const jobSchema = z.object({
     .min(10, { message: "Requirements must be at least 10 characters long" }),
 });
 
+
+export const applicationStatusSchema = z.object({
+  status: z.enum(Object.values(ApplicationStatus) as [string, ...string[]]),
+});
+
+
 export const applicationSchema = z.object({
   jobId: z.uuid({ message: "jobId must be a valid UUID" }),
-  companyId: z.string({ message: "companyId must be a valid UUID" }),
+  // companyId: z.uuid({ message: "companyId must be a valid UUID" }),
   candidateName: z
     .string()
     .trim()
@@ -156,6 +167,13 @@ export const applicationSchema = z.object({
     .default("Career Page"),
 });
 
+
+export const updateApplicationSchema = applicationSchema.partial().extend({
+  status: z.enum(Object.values(ApplicationStatus) as [string, ...string[]]).optional(),
+});
+
+
+
 export const applicationNoteSchema = z.object({
   // applicationId: z.uuid({ message: "applicationId must be a valid UUID" }),
   note: z
@@ -165,9 +183,6 @@ export const applicationNoteSchema = z.object({
     .max(1000, { message: "Note must not exceed 1000 characters" }),
 });
 
-export const applicationStatusSchema = z.object({
-  status: z.enum(Object.values(ApplicationStatus) as [string, ...string[]]),
-});
 
 export const assignmentSchema = z.object({
   companyId: z.uuid({ message: "companyId must be a valid UUID" }),

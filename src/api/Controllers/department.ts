@@ -10,7 +10,7 @@ export const viewCreateDepartment = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const { companyId } = req.query; // companyId
     const { name, description } = req.body;
 
@@ -48,7 +48,7 @@ export const viewUpdateDepartment = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
 
     const deptId = req.params.id; // departmentId
     const { name, description } = req.body;
@@ -125,7 +125,7 @@ export const deleteDepartmentById = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user?.id;
     const deptId  = req.params.id;
     const existingDepartment = await prisma.department.findUnique({
       where: { id: deptId, isDeleted: false },
@@ -240,7 +240,7 @@ export const viewDeleteBulkDepartments = async (
 ) => {
   try {
     const ids: string[] = req.body.ids;
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user?.id;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ message: "No IDs provided for deletion" });

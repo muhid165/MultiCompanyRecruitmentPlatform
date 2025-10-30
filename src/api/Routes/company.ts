@@ -10,7 +10,7 @@ const router = Router();
 
 //COMPANIES
 router.get("/search", isAuthenticated, hasPermission("view_all_companies"), viewSearchCompany); //
-router.get("/filter", isAuthenticated, viewFilterCompanies); // filter 
+router.get("/filter", isAuthenticated, hasPermission("view_all_companies"), viewFilterCompanies); // filter 
 router.get("/", isAuthenticated, hasPermission("view_all_companies"), viewAllCompanies); //
 router.get("/:id", isAuthenticated, hasPermission("view_company"), viewCompanyById); 
 router.post("/", isAuthenticated, hasPermission("add_company"), fileUpload,  viewCreateCompany); //

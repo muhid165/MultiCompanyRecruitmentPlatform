@@ -13,7 +13,7 @@ router.post("/assignment", isAuthenticated, validate(assignmentSchema), hasPermi
 // Get all assignments
 router.get("/assignments", isAuthenticated, hasPermission("view_assingment"), viewAssignments);
 
-// Get by ID
+// Get by ID 
 router.get("/assignments/:id", isAuthenticated, hasPermission("view_assingment"), viewAssignmentsById);
 
 // Update

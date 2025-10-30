@@ -291,7 +291,6 @@
  *       required:
  *         - name
  *         - code
- *         - roleType
  *       properties:
  *         name:
  *           type: string
@@ -305,11 +304,6 @@
  *           type: string
  *           description: Brief description of the role
  *           example: "Manages HR operations and employee data"
- *         roleType:
- *           type: string
- *           enum: [SYSTEM, USER, INTERNAL, CLIENT]
- *           description: Type of the role
- *           example: "SYSTEM/USER/INTERNAL/CLIENT"
  *         companyId:
  *           type: string
  *           description: Optional company ID for client/staff roles
@@ -716,8 +710,8 @@
  *   get:
  *     summary: Filter companies by name
  *     description: >
- *       Returns filtered company information based on query parameters.  
- *       - If `name` is **not provided**, it returns all company names.  
+ *       Returns filtered company information based on query parameters.
+ *       - If `name` is **not provided**, it returns all company names.
  *       - If `name` is provided, it returns matching company **IDs and names**.
  *     tags: [Company]
  *     security:
@@ -755,6 +749,60 @@
  *         description: Invalid query parameters
  *       401:
  *         description: Unauthorized, missing or invalid token
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/company/search:
+ *   get:
+ *     summary: Search companies by name
+ *     description: Returns a list of companies whose names match the provided search query. Only companies that are not soft deleted (isDeleted = false) will be returned.
+ *     tags: [Company]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The search string to match company names.
+ *         example: Tech
+ *     responses:
+ *       200:
+ *         description: Successfully fetched matching companies
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 companies:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "b12c4d56-e789-12ab-cd34-567890ef1234"
+ *                       name:
+ *                         type: string
+ *                         example: "TechCorp"
+ *       400:
+ *         description: Bad Request — Missing or invalid search query
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Search query is required
+ *       401:
+ *         description: Unauthorized — Authentication required
+ *       403:
+ *         description: Forbidden — Insufficient permissions
  *       500:
  *         description: Internal server error
  */
@@ -816,77 +864,73 @@
  *         description: Internal server error
  */
 
-
-
-
-
-/**
- * @swagger
- * /api/company/admins:
- *   post:
- *     summary: Assign admins to a company
- *     tags:
- *       - Company
- *     description: Assign one or more existing users as admins for a specific company by updating their `companyId` and `roleId`. Requires `add_company_admin` permission.
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: companyId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the company to which the admins will be assigned.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - roleId
- *               - adminIds
- *             properties:
- *               roleId:
- *                 type: string
- *                 description: The role ID to assign to the admins.
- *                 example: "6710b32f7f62bca2dcb12e94"
- *               adminIds:
- *                 type: array
- *                 description: List of user IDs to assign as company admins.
- *                 items:
- *                   type: string
- *                   example: "6710c945efb2a2d1f2c5e91a"
- *     responses:
- *       200:
- *         description: Company admins assigned successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company admins assigned successfully
- *       404:
- *         description: Company not found.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Company not found
- *       400:
- *         description: Missing or invalid companyId.
- *       401:
- *         description: Unauthorized – Missing or invalid authentication token.
- *       403:
- *         description: Forbidden – Missing `add_company_admin` permission.
- *       500:
- *         description: Internal server error.
- */
+// /**
+//  * @swagger
+//  * /api/company/admins:
+//  *   post:
+//  *     summary: Assign admins to a company
+//  *     tags:
+//  *       - Company
+//  *     description: Assign one or more existing users as admins for a specific company by updating their `companyId` and `roleId`. Requires `add_company_admin` permission.
+//  *     security:
+//  *       - bearerAuth: []
+//  *     parameters:
+//  *       - in: query
+//  *         name: companyId
+//  *         required: true
+//  *         schema:
+//  *           type: string
+//  *         description: The ID of the company to which the admins will be assigned.
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         application/json:
+//  *           schema:
+//  *             type: object
+//  *             required:
+//  *               - roleId
+//  *               - adminIds
+//  *             properties:
+//  *               roleId:
+//  *                 type: string
+//  *                 description: The role ID to assign to the admins.
+//  *                 example: "6710b32f7f62bca2dcb12e94"
+//  *               adminIds:
+//  *                 type: array
+//  *                 description: List of user IDs to assign as company admins.
+//  *                 items:
+//  *                   type: string
+//  *                   example: "6710c945efb2a2d1f2c5e91a"
+//  *     responses:
+//  *       200:
+//  *         description: Company admins assigned successfully.
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: Company admins assigned successfully
+//  *       404:
+//  *         description: Company not found.
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: Company not found
+//  *       400:
+//  *         description: Missing or invalid companyId.
+//  *       401:
+//  *         description: Unauthorized – Missing or invalid authentication token.
+//  *       403:
+//  *         description: Forbidden – Missing `add_company_admin` permission.
+//  *       500:
+//  *         description: Internal server error.
+//  */
 
 /**
  * @swagger
@@ -1594,9 +1638,9 @@
  *   get:
  *     summary: Filter jobs by company and title
  *     description: >
- *       Returns filtered job information based on the provided query parameters.  
- *       - If only `companyId` is provided → returns all job titles for that company.  
- *       - If both `companyId` and `title` are provided → returns matched job IDs and titles.  
+ *       Returns filtered job information based on the provided query parameters.
+ *       - If only `companyId` is provided → returns all job titles for that company.
+ *       - If both `companyId` and `title` are provided → returns matched job IDs and titles.
  *       - If no parameters are provided → returns all jobs.
  *     tags: [Company - Jobs]
  *     security:
@@ -1700,9 +1744,6 @@
  *       500:
  *         description: Internal server error
  */
-
-
-
 
 /**
  * @swagger
@@ -2509,7 +2550,6 @@
  *         description: Internal server error
  */
 
-
 /**
  * @swagger
  * /api/user:
@@ -2778,9 +2818,6 @@
  *       500:
  *         description: Internal server error
  */
-
-
-
 
 /**
  * @swagger
@@ -3111,8 +3148,8 @@
  * @swagger
  * /api/application/{id}:
  *   put:
- *     summary: Change application status
- *     description: Update the status of a specific application. Requires `edit_application_status` permission.
+ *     summary: Update an existing application
+ *     description: Updates an existing application by ID. Supports updating candidate details, job and company references, skills, experience, and optional resume file upload. Also logs application history and user activity.
  *     tags: [Company - Applications]
  *     security:
  *       - bearerAuth: []
@@ -3122,21 +3159,76 @@
  *         required: true
  *         schema:
  *           type: string
- *         description: ID of the application
+ *           format: uuid
+ *         description: The unique ID of the application to update.
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
+ *               jobId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the related job.
+ *                 example: "c56a4180-65aa-42ec-a945-5fd21dec0538"
+ *               companyId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the related company.
+ *                 example: "d1e7b59b-4e8f-4a9a-8d20-2f9c3bc987a2"
+ *               candidateName:
+ *                 type: string
+ *                 example: "Abdul Mueed"
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "abdul@example.com"
+ *               phone:
+ *                 type: string
+ *                 example: "9876543210"
+ *               experience:
+ *                 type: string
+ *                 description: JSON string representing candidate experience.
+ *                 example: '[{"company":"ABC Corp","years":2}]'
+ *               skills:
+ *                 type: string
+ *                 description: JSON string or comma-separated list of skills.
+ *                 example: '["Node.js", "Express.js", "MongoDB"]'
+ *               currentCTC:
+ *                 type: string
+ *                 example: "6 LPA"
+ *               expectedCTC:
+ *                 type: string
+ *                 example: "8 LPA"
+ *               noticePeriod:
+ *                 type: string
+ *                 example: "30 days"
  *               status:
  *                 type: string
- *                 example: INTERVIEW
- *                 description: New status for the application (APPLIED, SHORTLISTED, INTERVIEW, OFFERED, HIRED, REJECTED)
+ *                 enum:
+ *                   - APPLIED
+ *                   - INTERVIEW
+ *                   - OFFERED
+ *                   - REJECTED
+ *                   - HIRED
+ *                 example: "INTERVIEWING"
+ *               source:
+ *                 type: string
+ *                 example: "LinkedIn"
+ *               resumeUrl:
+ *                 type: string
+ *                 format: uri
+ *                 description: Optional existing resume URL (used if no new file is uploaded)
+ *                 example: "https://example.com/resumes/mueed.pdf"
+ *               resume:
+ *                 type: string
+ *                 format: binary
+ *                 description: Resume file to upload (optional)
  *     responses:
  *       200:
- *         description: Application status changed successfully
+ *         description: Application updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -3144,13 +3236,32 @@
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Application status changed successfully
+ *                   example: Application updated successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "d1e7b59b-4e8f-4a9a-8d20-2f9c3bc987a2"
+ *                     candidateName:
+ *                       type: string
+ *                       example: "Abdul Mueed"
+ *                     status:
+ *                       type: string
+ *                       example: "INTERVIEWING"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-10-23T10:30:00.000Z"
  *       400:
- *         description: Invalid status or id
+ *         description: Bad Request — Invalid or missing input data
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized — Authentication required
  *       403:
- *         description: Forbidden – Missing `edit_application_status` permission
+ *         description: Forbidden — Insufficient permissions
+ *       404:
+ *         description: Application not found
  *       500:
  *         description: Internal server error
  */
@@ -3364,8 +3475,6 @@
  *         description: Internal server error
  */
 
-
-
 /**
  * @swagger
  * /api/department/filter:
@@ -3489,10 +3598,6 @@
  *       500:
  *         description: Internal server error
  */
-
-
-
-
 
 /**
  * @swagger
@@ -3688,7 +3793,6 @@
  *       500:
  *         description: Error generating or downloading the report
  */
-
 
 /**
  * @swagger

@@ -8,7 +8,7 @@ const router = Router();
 
 //JOBS
 router.get("/search", isAuthenticated, hasPermission("view_company_job"), viewSearchJobs);
-router.get("/filter", isAuthenticated, filterJobs);
+router.get("/filter", isAuthenticated, hasPermission("view_company_job"), filterJobs);
 router.get("/", isAuthenticated, hasPermission("view_company_job"), viewCompanyJob);
 router.post("/", isAuthenticated, hasPermission("add_company_job"), validate(jobSchema), viewCreateJob);
 router.put("/:jobId", isAuthenticated, hasPermission("edit_company_job"), viewUpdateJob);

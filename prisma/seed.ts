@@ -15,7 +15,7 @@ async function main() {
     superAdminRole = await prisma.role.create({
       data: {
         code: "ADMIN",
-        name: "Super Admin",
+        name: "ADMIN",
         roleType: "SYSTEM",
         description: "Super Admin have all access",
       },
@@ -87,6 +87,7 @@ async function main() {
     { codename: "delete_role", name: "delete_role" },
     { codename: "view_application", name: "view_application" },
     { codename: "delete_application", name: "delete_application" },
+    { codename: "edit_application", name: "edit_application" },
   ];
 
   const permissions = [];
