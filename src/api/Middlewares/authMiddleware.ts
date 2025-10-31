@@ -105,15 +105,3 @@ export const isAuthenticated = async (
 // };
 
 
-// Role Check Middleware (Keeping 403 for forbidden access)
-export const checkUserRole = (...allowedRoles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = (req as any).user.userRole; 
-    if (allowedRoles.includes(userRole)) {
-      next();
-    } else {
-      return res.status(403).json({ message: 'Forbidden: Insufficient permissions' }); // 403 for role-based access control
-    }
-  };
-};
-

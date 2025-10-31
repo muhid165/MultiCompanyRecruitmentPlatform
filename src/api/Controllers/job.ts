@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
-import { filterData } from "./filter";
+import { filterData } from "../../Utils/companyFilterData";
 import { ActivityLogType, EntityType, Job } from "@prisma/client";
 import { logActivity } from "../../Utils/activityLog";
 
@@ -312,7 +312,6 @@ export const filterJobs = async (
       title?: string;
     };
 
-    // Step 1: Reuse your generic filterData utility
     const result = (await filterData({
       model: prisma.job,
       query: req.query,
@@ -380,7 +379,30 @@ export const viewSearchJobs = async (
     next(error);
   }
 };
+export const viewJobById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const jobId = req.params.id;
 
+    const job = await prisma.job.findUnique({
+      where: {
+        id: jobId,
+      },
+    });
+
+    if (!job) throw new Error(`No job found with ID: ${jobId}`);
+
+    return res.status(200).json({
+      message: "Job fetched successfully",
+      job,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 export const viewDeleteBulkjobs = async (
   req: Request,
   res: Response,

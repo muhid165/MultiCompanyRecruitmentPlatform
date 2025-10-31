@@ -11,7 +11,6 @@ import { REFRESH_TOKEN_SECRET } from "../../Config";
 import { generateAccessToken } from "../../Utils/generateToken";
 import { logActivity } from "../../Utils/activityLog";
 import { ActivityLogType, EntityType } from "@prisma/client";
-import { error } from "console";
 
 export const viewLogin = async (
   req: Request,
@@ -36,9 +35,15 @@ export const viewRegister = async (
     const userId = (req as any).user?.id;
     const { fullName, email, phone, roleId } = req.body;
     const tempPassword = Math.random().toString(36).slice(-8);
-    console.log(`This is the password for ${fullName}:  ${tempPassword}`)
-    const user = await registerUser(email, fullName, tempPassword, phone, roleId);
-    sendEmail(email, fullName, tempPassword,);
+    console.log(`This is the password for ${fullName}:  ${tempPassword}`);
+    const user = await registerUser(
+      email,
+      fullName,
+      tempPassword,
+      phone,
+      roleId
+    );
+    await sendEmail(email, fullName, tempPassword);
 
     await logActivity({
       userId: userId,
@@ -46,7 +51,7 @@ export const viewRegister = async (
       entityType: EntityType.USER,
       entityId: user?.id,
       description: `Registered a User`,
-      changes: { fulName: fullName, email: email },
+      changes: { fullName: fullName, email: email },
     });
     return res.status(200).json({
       message: "User created successfully. Login credentials sent via email.",
@@ -138,8 +143,12 @@ export const viewRefreshToken = async (
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
-    const accessToken = generateAccessToken(user.email);
+    if (user.refreshToken !== refreshToken) {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
 
+    const accessToken = generateAccessToken(user.email);
+    
     res.status(200).json({ accessToken });
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

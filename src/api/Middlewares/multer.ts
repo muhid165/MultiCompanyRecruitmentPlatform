@@ -9,10 +9,15 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     // Generate unique filename
     const uniqueSuffix = randomBytes(8).toString("hex");
-    const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext);
-    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
+    const ext = path.extname(file.originalname);  /// extension name 
+    let baseName = path.basename(file.originalname, ext);
 
+    baseName = baseName
+      .toLowerCase() 
+      .replace(/\s+/g, "_") // replace spaces with underscores
+      .replace(/[^\w.-]/g, ""); // remove unsafe characters
+
+    cb(null, `${baseName}-${uniqueSuffix}${ext}`);
   },
 });
 export const upload = multer({

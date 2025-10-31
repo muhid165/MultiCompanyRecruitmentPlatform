@@ -1,4 +1,3 @@
-import { includes } from "zod";
 import prisma from "../Config/prisma";
 import {
   generateAccessToken,
@@ -85,19 +84,6 @@ export const registerUser = async (
   const hashedPassword = await hashPassword(password);
 
   const user = await prisma.user.create({
-    // select: {
-    //   id: true,
-    //   roleId: true,
-    //   fullName: true,
-    //   email: true,
-    //   phone: true,
-    //   companyId: true,
-    //   UserPermissions: {
-    //     include: { Permission: { select: { codename: true } } },
-    //   },
-    //   GroupMember: { select: { groupId: true } },
-      
-    // },
     data: {
       fullName,
       email,

@@ -1,4 +1,4 @@
-import prisma from "../../Config/prisma";
+import prisma from "../Config/prisma";
 
 interface FilterOptions {
   model: any; // e.g., prisma.department

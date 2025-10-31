@@ -17,6 +17,13 @@ export const viewCreateDepartment = async (
     if (!companyId) {
       return res.status(400).json({ message: "companyId is required" });
     }
+
+    const exists = await prisma.department.findFirst({
+      where: { name, companyId: companyId as string, isDeleted: false },
+    });
+    if (exists)
+      return res.status(409).json({ message: "Department already exists" });
+
     const department = await prisma.department.create({
       select: { id: true, companyId: true, name: true, description: true },
       data: {
@@ -110,7 +117,7 @@ export const viewCompanyDepartments = async (
 
     return res.status(200).json({
       page,
-      tatalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
       departments,
     });
@@ -126,7 +133,7 @@ export const deleteDepartmentById = async (
 ) => {
   try {
     const userId = (req as any).user?.id;
-    const deptId  = req.params.id;
+    const deptId = req.params.id;
     const existingDepartment = await prisma.department.findUnique({
       where: { id: deptId, isDeleted: false },
     });
@@ -138,6 +145,7 @@ export const deleteDepartmentById = async (
       },
       data: {
         isDeleted: true,
+        deletedAt: new Date()
       },
     });
 
@@ -166,13 +174,11 @@ export const viewDepartments = async (
       name?: string;
     };
 
-    // Step 1: Use reusable filter utility
     const result = (await filterData({
       model: prisma.department,
-      query: req.query,
+      query:{ ...req.query, isDeleted: false},
     })) as Department[];
-
-    // Step 2: Custom response formatting
+   
     let responseData: Partial<Department>[] = [];
 
     if (companyId && !name) {
@@ -209,7 +215,13 @@ export const viewSearchDepartments = async (
   try {
     const { query, id } = req.query;
 
-    if ( !id || typeof id !== "string" || !query || typeof query !== "string" || query.trim() === "") {
+    if (
+      !id ||
+      typeof id !== "string" ||
+      !query ||
+      typeof query !== "string" ||
+      query.trim() === ""
+    ) {
       return res.status(400).json({ message: "Search query is required" });
     }
 
@@ -261,7 +273,9 @@ export const viewDeleteBulkDepartments = async (
       });
     }
 
-    return res.status(200).json({ message: "Departments Deleted successfully" });
+    return res
+      .status(200)
+      .json({ message: "Departments Deleted successfully" });
   } catch (err) {
     next(err);
   }

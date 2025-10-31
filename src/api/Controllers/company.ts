@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
 import { ActivityLogType, Company, EntityType, User } from "@prisma/client";
-import { filterData } from "./filter";
+import { filterData } from "../../Utils/companyFilterData";
+// import { filterData } from "../../Utils/filterData";
 import { logActivity } from "../../Utils/activityLog";
 
 //COMPANY
@@ -242,43 +243,10 @@ export const viewCompanyById = async (
       },
       where: {
         id: companyId,
+        isDeleted: false,
       },
     });
     return res.status(200).json({ company });
-  } catch (error) {
-    next(error);
-  }
-};
-// no need till now
-export const assingCompanyAdmins = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const userId = (req as any).user?.id;
-    const { companyId } = req.query;
-    const { roleId, adminIds } = req.body;
-
-    const company = await prisma.company.findUnique({
-      where: { id: companyId as string },
-    });
-    if (!company) return res.status(404).json({ message: "Company not found" });
-
-    await prisma.user.updateMany({
-      where: { id: { in: adminIds } },
-      data: { companyId: companyId as string, roleId },
-    });
-
-    await logActivity({
-      userId: userId,
-      action: ActivityLogType.ASSIGNED,
-      entityType: EntityType.COMPANY,
-      description: `Assigned a company to a user `,
-      changes: { adminIds: adminIds, companyId: companyId },
-    });
-
-    res.status(200).json({ message: "Company admins assigned successfully" });
   } catch (error) {
     next(error);
   }
@@ -296,7 +264,7 @@ export const viewFilterCompanies = async (
     // Step 1: Use reusable filter utility
     const result = (await filterData({
       model: prisma.company,
-      query: req.query,
+      query: { ...req.query, isDeleted: false },
     })) as { data: Company[] };
 
     // Step 2: Format response based on query params
@@ -351,7 +319,6 @@ export const viewSearchCompany = async (
     next(error);
   }
 };
-
 export const viewDeleteBulkCompanies = async (
   req: Request,
   res: Response,
@@ -385,3 +352,4 @@ export const viewDeleteBulkCompanies = async (
     next(err);
   }
 };
+

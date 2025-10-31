@@ -4,7 +4,7 @@ interface FilterOptions {
   query: Record<string, any>;
 }
 
-export const filterData = async ({ model, query }: FilterOptions) => {
+export const filterData = async <T>({ model, query }: FilterOptions) => {
   const where: any = {};
 
   // dynamically build filter conditions

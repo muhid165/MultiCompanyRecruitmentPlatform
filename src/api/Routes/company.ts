@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { assingCompanyAdmins, deleteCompany, viewAllCompanies, viewCompanyById, viewCreateCompany, viewDeleteBulkCompanies, viewFilterCompanies, viewSearchCompany, viewUpdateCompany } from "../Controllers/company";
+import { deleteCompany, viewAllCompanies, viewCompanyById, viewCreateCompany, viewDeleteBulkCompanies, viewFilterCompanies, viewSearchCompany, viewUpdateCompany } from "../Controllers/company";
 import { isAuthenticated } from "../Middlewares/authMiddleware";
 import { upload } from "../Middlewares/multer";
 const fileUpload = upload.single("file");
@@ -17,7 +17,6 @@ router.post("/", isAuthenticated, hasPermission("add_company"), fileUpload,  vie
 router.put("/:id", isAuthenticated, hasPermission("edit_company"), fileUpload, validate(companySchema), viewUpdateCompany);
 router.delete("/bulk", isAuthenticated, hasPermission("delete_company"),validate(bulkDeleteSchema), viewDeleteBulkCompanies); // new
 router.delete("/:id", isAuthenticated, hasPermission("delete_company"), deleteCompany);
-// router.post("/admins", isAuthenticated, hasPermission("add_company_admin"), assingCompanyAdmins); // no need till now 
 
 
 export default router;

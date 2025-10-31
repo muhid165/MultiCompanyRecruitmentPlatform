@@ -293,7 +293,7 @@ export const viewUpdateGroupPermissions = async (
   try {
     const { id } = req.params;
     const { permissionIds } = req.body;
-    console.log("this is the ids ", permissionIds);
+    // console.log("this is the ids ", permissionIds);
     const userId = (req as any).user?.userId;
     await prisma.groupPermission.deleteMany({ where: { groupId: id } });
 

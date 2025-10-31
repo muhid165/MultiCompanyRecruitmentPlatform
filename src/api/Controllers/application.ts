@@ -4,18 +4,19 @@ import { sendApplicationMail } from "../../Services/mail";
 import { logActivity } from "../../Utils/activityLog";
 import { ActivityLogType, EntityType } from "@prisma/client";
 
-//APPLICATION
-export const viewCreateApplication = async (  // updated this controller to get ID from the token 
+//APPLICATION   // updated this controller to get companyID from the token
+export const viewCreateApplication = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const companyId = req.companyId;
-  if (!companyId) {   // throw new Error here 
-    return res
-      .status(400)
-      .json({ message: "Invalid token: missing company ID" });
+  
+  const companyId  = req.query.companyId;
+
+  if (!companyId || typeof companyId !== "string") {
+    return res.status(400).json({ message: "Missing or invalid companyId." });
   }
+
   if (!req.file)
     throw new Error(
       "Application error: Resume file is missing. Please upload a resume."
@@ -76,6 +77,7 @@ export const viewCreateApplication = async (  // updated this controller to get 
       data: newApplication,
     });
   } catch (error) {
+    console.log("Error",error)
     next(error);
   }
 };
@@ -132,7 +134,7 @@ export const viewCompanyApplications = async (
     return res.status(200).json({
       message: " Applications fetched successfully",
       page,
-      tatalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
       applications,
     });
@@ -218,34 +220,35 @@ export const viewUpdateApplication = async (
     //   },
     // });
 
-    const [updatedApplication, historyEntry] = await prisma.$transaction([
-      prisma.application.update({
-        where: { id: applicationId },
-        data: {
-          jobId,
-          companyId,
-          candidateName,
-          email,
-          phone,
-          resumeUrl,
-          experience: experienceData,
-          skills: skillsArray,
-          currentCTC,
-          expectedCTC,
-          noticePeriod,
-          status,
-          source,
-        },
-      }),
-      prisma.applicationHistory.create({
+    const updatedApplication = await prisma.application.update({
+      where: { id: applicationId },
+      data: {
+        jobId,
+        companyId,
+        candidateName,
+        email,
+        phone,
+        resumeUrl,
+        experience: experienceData,
+        skills: skillsArray,
+        currentCTC,
+        expectedCTC,
+        noticePeriod,
+        status,
+        source,
+      },
+    });
+
+    if (status && status !== existingApplication.status) {
+      await prisma.applicationHistory.create({
         data: {
           applicationId,
           oldStatus: existingApplication.status,
           newStatus: status,
           changeById: userId,
         },
-      }),
-    ]);
+      });
+    }
 
     // ✅ Log update
     await logActivity({
