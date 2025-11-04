@@ -10,7 +10,7 @@ export const isAuthenticated = async (
   next: NextFunction
 ) => {
   const authHeader = req.headers.authorization;
-  const refreshHeader = req.headers["x-refresh-token"]; // refresh token can be sent via header
+  const refreshHeader = req.headers["x-refresh-token"];    // In this case refresh tokern is sent in body
 
   if (!authHeader)
     return res.status(401).json({ message: "Please login to continue." });
@@ -18,7 +18,7 @@ export const isAuthenticated = async (
   const accessToken = authHeader.split(" ")[1];
 
   try {
-    // ✅ 1. Verify Access Token
+    
     const decoded = jwt.verify(accessToken, JWTSECRET) as JwtPayload;
 
     const existingUser = await prisma.user.findUnique({
@@ -39,7 +39,6 @@ export const isAuthenticated = async (
       const refreshToken = refreshHeader as string;
 
       try {
-        // ✅ 2. Verify Refresh Token
         const decodedRefresh = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET) as JwtPayload;
 
         const existingUser = await prisma.user.findUnique({
@@ -50,14 +49,12 @@ export const isAuthenticated = async (
           return res.status(403).json({ message: "Invalid refresh token." });
         }
 
-        // ✅ 3. Generate new Access Token
         const newAccessToken = jwt.sign(
           { id: existingUser.id, email: existingUser.email },
           JWTSECRET,
           { expiresIn: "15m" }
         );
 
-        // Send new access token to client
         res.setHeader("x-access-token", newAccessToken);
 
         (req as any).user = existingUser;

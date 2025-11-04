@@ -9,7 +9,6 @@ import { normalizeQuery } from "../../Utils/normalizeQuery";
 import { buildPrismaFilters } from "../../Utils/buildPrismaFilters";
 import { logActivity } from "../../Utils/activityLog";
 import { filterData } from "../../Utils/filterData";
-// import { auditLog } from "../../utils/audit";   // create own log
 
 /**
  * Create Role
@@ -96,16 +95,11 @@ export const viewRoles = async (
 ) => {
   try {
     const pageNumber = parseInt(req.query.page as string) || 1;
-    const pageSize = parseInt(req.query.limit as string) || 10;
-    const skip = (pageNumber - 1) * pageSize;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (pageNumber - 1) * limit;
 
-    // map query fields to Prisma paths (when nested)
     const schemaFields = {
       companyId: { type: "string" as const },
-      roleType: {
-        type: "enum" as const,
-        enumValues: ["SYSTEM", "CLIENT", "STAFF", "ADMIN"],
-      },
       code: { type: "string" as const, path: ["code"] },
       name: { type: "string" as const, path: ["name"] },
     };
@@ -113,12 +107,23 @@ export const viewRoles = async (
     const normalized = normalizeQuery(req.query);
     const filters: any = buildPrismaFilters(normalized, schemaFields);
 
+    const where: any = {
+      ...filters,
+    };
+
+    if (normalized.role) {
+      where.OR = [
+        { name: { contains: normalized.role, mode: "insensitive" } },
+        { code: { contains: normalized.role, mode: "insensitive" } },
+      ];
+    }
+
     const [roles, total] = await Promise.all([
       prisma.role.findMany({
-        where: filters,
+        where,
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         skip,
-        take: pageSize,
+        take: limit,
       }),
       prisma.role.count({
         where: filters,
@@ -129,8 +134,8 @@ export const viewRoles = async (
       roles,
       total,
       page: pageNumber,
-      limit: pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
     next(err);
@@ -159,7 +164,6 @@ export const viewSearchRoles = async (
     }
 
     const where: any = {
-      // isDeleted: false,
       ...(q &&
         companyId && {
           OR: [
@@ -479,31 +483,41 @@ export const viewFilterRoles = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    const { name } = req.query as {
-      name?: string;
+    const { role } = req.query as {
+      role?: string;
     };
 
-    // Step 1: Use reusable filter utility
     const result = (await filterData({
       model: prisma.role,
       query: req.query,
-    })) as  Role[] 
+    })) as { data: Role[] };
 
-    // Step 2: Format response based on query params
     let responseData: Partial<Role>[] = [];
 
-    if (!name) {
-      // Case 1 → Only fetch all role names
-      responseData = result.map((role) => ({
+    // if (!role) {
+    //   responseData = result.data.map((role) => ({
+    //     id: role.id,
+    //     name: role.name,
+    //   }));
+    // } else if (role) {
+    //   responseData = result.data.map((role) => ({
+    //     id: role.id,
+    //     name: role.name,
+    //     codename: role.code,
+    //   }));
+    // }
+
+    if (role) {
+      for (const role of result.data) {
+        responseData.push({
+          id: role.id,
+          name: role.name,
+        });
+      }
+    } else {
+      responseData = result.data.map((role) => ({
         id: role.id,
         name: role.name,
-      }));
-    } else if (name) {
-      // Case 2 → Fetch specific role ID and name
-      responseData = result.map((role) => ({
-        id: role.id,
-        name: role.name,
-        codename: role.code,
       }));
     }
 

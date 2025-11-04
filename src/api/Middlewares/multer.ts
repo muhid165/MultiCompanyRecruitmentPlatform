@@ -7,7 +7,6 @@ const storage = multer.diskStorage({
     cb(null, "./public/temp");
   },
   filename: function (req, file, cb) {
-    // Generate unique filename
     const uniqueSuffix = randomBytes(8).toString("hex");
     const ext = path.extname(file.originalname);  /// extension name 
     let baseName = path.basename(file.originalname, ext);

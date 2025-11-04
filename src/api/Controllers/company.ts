@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
 import { ActivityLogType, Company, EntityType, User } from "@prisma/client";
-import { filterData } from "../../Utils/companyFilterData";
+import { filterData } from "../../Utils/filterData";
 // import { filterData } from "../../Utils/filterData";
 import { logActivity } from "../../Utils/activityLog";
 
@@ -352,4 +352,3 @@ export const viewDeleteBulkCompanies = async (
     next(err);
   }
 };
-

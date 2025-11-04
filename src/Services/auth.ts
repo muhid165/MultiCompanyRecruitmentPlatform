@@ -1,4 +1,5 @@
 import prisma from "../Config/prisma";
+
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -26,12 +27,12 @@ export const loginUser = async (email: string, password: string) => {
     },
   });
 
-  if (!user) throw new Error("User not Found.");
-  if (!user.password) throw new Error("No password associated with user.");
+  if (!user) throw new Error("Invalid credentials.");
+  // if (!user.password) throw new Error("No password associated with user.");
 
   const isPasswordValid = await comparePassword(password, user.password);
   if (!isPasswordValid) {
-    throw new Error("Invalid Credentials.");
+    throw new Error("Invalid credentials.");
   }
 
   const refreshToken = generateRefreshToken(user.id);

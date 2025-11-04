@@ -6,9 +6,14 @@
   "author": "Muhid Shaikh",
   "type": "commonjs",
   "main": "src/index.js",
+  "prisma": {
+  "seed": "ts-node prisma/seed.ts"
+},
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "seed": "ts-node prisma/seed.ts" 
+    "seed": "ts-node prisma/seed.ts",
+    "build": "tsc",
+    "start": "ts-node src/server.ts" 
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",

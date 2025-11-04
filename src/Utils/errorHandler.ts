@@ -9,7 +9,7 @@ export const errorHandler = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("Caught Error: ", err);
+  console.log(err);
 
   let statusCode = 500;
   let message = "An unknown server error occurred.";
@@ -54,13 +54,25 @@ export const errorHandler = async (
     return res.status(400).json({ message: `Multer Error: ${err.message}` });
   } else if (err instanceof Error) {
     statusCode = (err as any).status || (err as any).statusCode || 500;
-    message = err.message;
+    message = err.message || "Something went wrong";
 
     if (statusCode < 400 || statusCode > 599) {
       statusCode = 500;
     }
-    return res.status(statusCode).json({ message });
+    return res.status(statusCode).json({ message });   
   } else {
     return res.status(statusCode).json({ message });
   }
 };
+
+
+// utils/ApiError.ts
+// export class ApiError extends Error {
+//   statusCode: number;
+
+//   constructor(message: string, statusCode: number) {
+//     super(message);
+//     this.statusCode = statusCode;
+//     Error.captureStackTrace(this, this.constructor);
+//   }
+// }

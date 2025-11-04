@@ -7,7 +7,7 @@ import { userSchema } from "../../Validators/validations";
 
 const router = Router();
 
-router.post("/register", isAuthenticated, hasPermission("add_user"), validate(userSchema), viewRegister);
+router.post("/register", isAuthenticated, hasPermission("add_user"), viewRegister);
 router.post("/login", viewLogin);
 router.get("/profile", isAuthenticated, viewProfile);
 router.put("/change-password", isAuthenticated, changePassword);

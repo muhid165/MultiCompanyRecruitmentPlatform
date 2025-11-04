@@ -69,7 +69,9 @@ export const viewPermissions = async (
   next: NextFunction
 ) => {
   try {
-    const permissions = await prisma.permission.findMany({orderBy: {codename:"asc"}});
+    const permissions = await prisma.permission.findMany({
+      orderBy: { codename: "asc" },
+    });
 
     res.status(200).json(permissions);
   } catch (error) {
@@ -246,7 +248,7 @@ export const viewGroups = async (
     const skip = (page - 1) * limit;
 
     const groups = await prisma.group.findMany({
-      select: { id: true, name: true },
+      select: { id: true, name: true,createdAt: true, updatedAt: true },
       skip,
       take: limit,
     });
@@ -292,9 +294,10 @@ export const viewUpdateGroupPermissions = async (
 ) => {
   try {
     const { id } = req.params;
-    const { permissionIds } = req.body;
-    // console.log("this is the ids ", permissionIds);
+    const { name, permissionIds } = req.body;
+
     const userId = (req as any).user?.userId;
+
     await prisma.groupPermission.deleteMany({ where: { groupId: id } });
 
     const data = permissionIds.map((pid: any) => ({
@@ -302,6 +305,16 @@ export const viewUpdateGroupPermissions = async (
       permissionId: pid,
     }));
     await prisma.groupPermission.createMany({ data });
+
+    const group = await prisma.group.findUnique({
+      where: { id },
+    });
+    if (!group) throw new Error("No group found!");
+
+    const updatedGroup = await prisma.group.update({
+      where: { id: id },
+      data: { name },
+    });
 
     await logActivity({
       userId: userId,
@@ -312,7 +325,10 @@ export const viewUpdateGroupPermissions = async (
       changes: { groupId: id, updatedPermissions: permissionIds },
     });
 
-    res.status(200).json({ message: "Group permissions updated successfully" });
+    res.status(200).json({
+      message: "Group permissions updated successfully",
+      updatedGroup,
+    });
   } catch (error) {
     next(error);
   }

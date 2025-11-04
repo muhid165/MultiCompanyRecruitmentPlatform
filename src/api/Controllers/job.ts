@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
-import { filterData } from "../../Utils/companyFilterData";
+import { filterData } from "../../Utils/filterData";
 import { ActivityLogType, EntityType, Job } from "@prisma/client";
 import { logActivity } from "../../Utils/activityLog";
+import { normalizeQuery } from "../../Utils/normalizeQuery";
+import { buildPrismaFilters } from "../../Utils/buildPrismaFilters";
 
 export const viewCreateJob = async (
   req: Request,
@@ -14,14 +16,12 @@ export const viewCreateJob = async (
     const { companyId } = req.query;
     const {
       department,
-      title,
       location,
       experience,
       salaryRange,
       employmentType,
       description,
-      responsibilities,
-      requirements,
+      content 
     } = req.body;
 
     const existingDepartment = await prisma.department.findFirst({
@@ -35,14 +35,12 @@ export const viewCreateJob = async (
       data: {
         companyId: companyId as string,
         departmentId: existingDepartment.id,
-        title,
         location,
         experience,
         salaryRange,
         employmentType,
         description,
-        responsibilities,
-        requirements,
+        content,
         createdById: userId,
       },
     });
@@ -69,21 +67,27 @@ export const viewUpdateJob = async (
 ) => {
   try {
     const userId = (req as any).user?.id;
-    const { jobId } = req.params;
+    const jobId = req.params.id;
     const {
-      title,
       departmentId,
       location,
       experience,
       salaryRange,
       employmentType,
       description,
-      responsibilities,
-      requirements,
+      content,
+      status,
     } = req.body;
+
+    let published = false;
+    if (status === "ACTIVE") {
+      published = true;
+    }
+
     const job = await prisma.job.findUnique({
       where: {
         id: jobId,
+        isDeleted: false,
       },
     });
     if (!job) return res.status(400).json({ message: "Job not found " });
@@ -92,14 +96,14 @@ export const viewUpdateJob = async (
       where: { id: jobId },
       data: {
         departmentId,
-        title,
         location,
         experience,
         salaryRange,
         employmentType,
         description,
-        responsibilities,
-        requirements,
+        content,
+        status,
+        published,
       },
     });
 
@@ -118,54 +122,86 @@ export const viewUpdateJob = async (
     next(error);
   }
 };
+
+
 export const viewCompanyJob = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.query;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
-    const jobs = await prisma.job.findMany({
-      select: {
-        id: true,
-        companyId: true,
-        Department: { select: { id: true, name: true } },
-        title: true,
-        location: true,
-        experience: true,
-        salaryRange: true,
-        employmentType: true,
-        description: true,
-        responsibilities: true,
-        requirements: true,
-        CreatedBy: { select: { id: true } },
-        published: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      where: {
-        companyId: companyId as string,
-        isDeleted: false,
-      },
-      skip,
-      take: limit,
-    });
 
-    const total = await prisma.job.count({
-      where: { companyId: companyId as string, isDeleted: false },
-    });
-    if (total <= 0)
-      return res.status(404).json({
-        message: "No Job found",
-      });
+    const schemaFields = {
+      companyId: { type: "string" as const },
+      name: {
+        type: "string" as const,
+        path: ["Department", "name"],
+      },
+      employmentType: {
+        type: "enum" as const,
+        enumValues: ["FULL_TIME", "CONTRACT", "INTERNSHIP"],
+      },
+      status: {
+        type: "enum" as const,
+        enumValues: ["DRAFT", "ACTIVE", "CLOSED"],
+      },
+    };
+
+    const normalized = normalizeQuery(req.query);
+    const filters: any = buildPrismaFilters(normalized, schemaFields);
+
+    // Fix for companyId (UUID exact match) ---
+    if (normalized.companyId) {
+      filters.companyId = { equals: normalized.companyId };
+    }
+
+    if (normalized.published !== undefined) {
+      const pubVal = normalized.published.toLowerCase();
+      if (pubVal === "true" || pubVal === "false") {
+        filters.published = pubVal === "true";
+      }
+    }
+
+    filters.isDeleted = false;
+
+    // console.log("Final job filters:", filters);
+
+    const [jobs, total] = await Promise.all([
+      prisma.job.findMany({
+        select: {
+          id: true,
+          companyId: true,
+          Department: { select: { id: true, name: true } },
+          location: true,
+          experience: true,
+          salaryRange: true,
+          employmentType: true,
+          description: true,
+          content: true,
+          CreatedBy: { select: { id: true } },
+          published: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        where: filters,
+        orderBy: [{ createdAt: "desc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.job.count({ where: filters }),
+    ]);
+
+    if (total === 0) {
+      return res.status(404).json({ message: "No Job found" });
+    }
 
     return res.status(200).json({
       page,
-      tatalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
       jobs,
     });
@@ -173,6 +209,7 @@ export const viewCompanyJob = async (
     next(error);
   }
 };
+
 export const viewPublishedCompanyJob = async (
   req: Request,
   res: Response,
@@ -188,14 +225,12 @@ export const viewPublishedCompanyJob = async (
         id: true,
         companyId: true,
         departmentId: true,
-        title: true,
         location: true,
         experience: true,
         salaryRange: true,
         employmentType: true,
         description: true,
-        responsibilities: true,
-        requirements: true,
+        content: true,
         CreatedBy: { select: { id: true } },
         published: true,
         status: true,
@@ -212,7 +247,11 @@ export const viewPublishedCompanyJob = async (
     });
 
     const total = await prisma.job.count({
-      where: { companyId: companyId as string, isDeleted: false },
+      where: {
+        companyId: companyId as string,
+        published: true,
+        status: "ACTIVE",
+      },
     });
     if (total <= 0)
       return res.status(404).json({
@@ -221,7 +260,7 @@ export const viewPublishedCompanyJob = async (
 
     return res.status(200).json({
       page,
-      tatalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
       jobs,
     });
@@ -236,7 +275,7 @@ export const viewDeleteJob = async (
 ) => {
   try {
     const userId = (req as any).user?.id;
-    const { jobId } = req.params; // jobId
+    const jobId = req.params.id; // jobId
     const job = await prisma.job.findUnique({
       where: {
         id: jobId,
@@ -248,7 +287,9 @@ export const viewDeleteJob = async (
       where: { id: jobId },
       data: {
         isDeleted: true,
+        deletedAt: new Date(),
         status: "CLOSED",
+        published: false,
       },
     });
 
@@ -265,80 +306,32 @@ export const viewDeleteJob = async (
     next(error);
   }
 };
-export const viewPublishJob = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const userId = (req as any).user?.id;
-    const { jobId } = req.params; // jobId
-    const job = await prisma.job.findUnique({
-      where: { id: jobId },
-    });
-    if (!job) return res.status(400).json({ message: "No Job foound" });
-
-    const publishedJob = await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        published: true,
-        status: "ACTIVE",
-      },
-    });
-
-    await logActivity({
-      userId: userId,
-      action: ActivityLogType.UPDATED,
-      entityType: EntityType.JOB,
-      description: `Published a job`,
-      changes: { jobId: job.id },
-    });
-
-    return res
-      .status(200)
-      .json({ message: "Job published successfully", publishedJob });
-  } catch (error) {
-    next(error);
-  }
-};
 export const filterJobs = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    const { companyId, title } = req.query as {
-      companyId?: string;
-      title?: string;
-    };
+    const { companyId } = req.query as { companyId?: string };
 
-    const result = (await filterData({
-      model: prisma.job,
-      query: req.query,
-    })) as { success: boolean; data: Job[] };
-
-    // Step 2: Prepare custom response
-    let responseData: Partial<Job>[] = [];
-
-    if (companyId && !title) {
-      // Only companyId present → return all job titles for that company
-      responseData = result.data.map((job) => ({
-        id: job.id,
-        title: job.title,
-      }));
-    } else if (companyId && title) {
-      // Both companyId & title present → return id + title of matched job(s)
-      responseData = result.data.map((job) => ({
-        id: job.id,
-        title: job.title,
-      }));
-    } else {
-      // Default: return everything (fallback)
-      responseData = result.data;
+    if (!companyId) {
+      return res.status(400).json({ message: "companyId is required" });
     }
 
+    const result = await filterData({
+      model: prisma.job,
+      query: { companyId, isDeleted: false },
+      defaultSortBy: "description",
+      defaultOrder: "asc",
+    });
+
+    const responseData = result.data.map((job: Job) => ({
+      id: job.id,
+      name: job.description,
+    }));
+
     return res.status(200).json({
-      message: "Filtered job data fetched successfully",
+      message: "Job Title dropdown data fetched successfully",
       data: responseData,
     });
   } catch (error) {
@@ -365,11 +358,11 @@ export const viewSearchJobs = async (
 
     const jobs = await prisma.job.findMany({
       where: {
-        OR: [{ title: { contains: query, mode: "insensitive" } }],
+        OR: [{ description: { contains: query, mode: "insensitive" } }],
         companyId: id,
         isDeleted: false,
       },
-      orderBy: { title: "asc" },
+      orderBy: { description: "asc" },
     });
 
     return res.status(200).json({
@@ -390,6 +383,7 @@ export const viewJobById = async (
     const job = await prisma.job.findUnique({
       where: {
         id: jobId,
+        isDeleted: false,
       },
     });
 
@@ -418,7 +412,12 @@ export const viewDeleteBulkjobs = async (
 
     await prisma.job.updateMany({
       where: { id: { in: ids } },
-      data: { isDeleted: true, deletedAt: new Date() },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        status: "CLOSED",
+        published: false,
+      },
     });
 
     for (const id of ids) {

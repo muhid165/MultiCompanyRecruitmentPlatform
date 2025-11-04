@@ -49,7 +49,14 @@ export const viewCompanyAnalytics = async (
       prisma.job.count({ where: { companyId, isDeleted: false } }),
       prisma.application.count({ where: { companyId, isDeleted: false } }),
     ]);
-
+    const all = {
+      companyId,
+      companyName: companyExists.name,
+      departments: departmentCount,
+      jobs: jobCount,
+      applications: applicationCount,
+    };
+    console.log(all);
     return res.status(200).json({
       message: "Company analytics fetched successfully",
       data: {
@@ -64,4 +71,3 @@ export const viewCompanyAnalytics = async (
     next(error);
   }
 };
-

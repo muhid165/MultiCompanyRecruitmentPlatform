@@ -3,6 +3,7 @@ import {
   UserType,
   EmploymentType,
   ApplicationStatus,
+  JobStatus,
 } from "@prisma/client";
 import { z } from "zod";
 
@@ -83,18 +84,13 @@ export const departmentSchema = z.object({
   description: z
     .string()
     .trim()
-    .max(300, { message: "Description must not exceed 300 characters" })
+    .max(1000, { message: "Description must not exceed 300 characters" })
     .optional(),
 });
 
 
 export const jobSchema = z.object({
   department: z.string(),
-  title: z
-    .string()
-    .trim()
-    .min(3, { message: "Job title must be at least 3 characters long" })
-    .max(150, { message: "Job title must not exceed 150 characters" }),
   location: z
     .string()
     .trim()
@@ -119,14 +115,16 @@ export const jobSchema = z.object({
   description: z
     .string()
     .trim()
-    .min(10, { message: "Description must be at least 10 characters long" }),
-  responsibilities: z.string().trim().min(10, {
-    message: "Responsibilities must be at least 10 characters long",
-  }),
-  requirements: z
+    .min(20, { message: "Description must be at least 20 characters long" }),
+  content: z
     .string()
     .trim()
-    .min(10, { message: "Requirements must be at least 10 characters long" }),
+    .min(50, { message: "content must be at least 50 characters long" }),
+});
+
+
+export const updateJobSchema = jobSchema.partial().extend({
+  status: z.enum(Object.values(JobStatus) as [string, ...string[]]).optional(),
 });
 
 

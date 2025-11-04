@@ -21,7 +21,7 @@ export const viewLogin = async (
     const { email, password } = req.body;
     const user = await loginUser(email, password);
 
-    return res.status(200).json({ message: "Logged In, ", user });
+    return res.status(200).json({ message: "LoggedIn successfull, ", user });
   } catch (error) {
     next(error);
   }
@@ -53,7 +53,7 @@ export const viewRegister = async (
       description: `Registered a User`,
       changes: { fullName: fullName, email: email },
     });
-    return res.status(200).json({
+    return res.status(201).json({
       message: "User created successfully. Login credentials sent via email.",
       user,
     });
@@ -96,13 +96,12 @@ export const changePassword = async (
 ) => {
   try {
     const userId = (req as any).user?.id;
-    const { oldPassword, newPassword, confirmPassword } = req.body;
-
+    const { oldPassword, password, cPassword } = req.body;
     const cUser = await changeUserPassword(
       userId,
       oldPassword,
-      newPassword,
-      confirmPassword
+      password,
+      cPassword
     );
 
     await logActivity({

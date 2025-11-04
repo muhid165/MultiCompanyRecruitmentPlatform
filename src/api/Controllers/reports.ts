@@ -17,7 +17,7 @@ export const exportCompanyReport = async (
     const fromDate = from ? new Date(from as string) : new Date("1970-01-01");
     const toDate = to ? new Date(to as string) : new Date();
 
-    // ✅ Fetch departments
+    //  Fetch departments
     const departments = await prisma.department.findMany({
       where: { companyId, isDeleted: false },
       include: {
@@ -40,8 +40,8 @@ export const exportCompanyReport = async (
 
     worksheet.columns = [
       { header: "Department Name", key: "department", width: 30 },
-      { header: "Job Title", key: "title", width: 30 },
       { header: "Job Description", key: "description", width: 50 },
+      { header: "Job Content", key: "content", width: 30 },
       { header: "Resume URL", key: "resume", width: 50 },
     ];
 
@@ -49,8 +49,8 @@ export const exportCompanyReport = async (
     if (!departments || departments.length === 0) {
       worksheet.addRow({
         department: "-",
-        title: "-",
         description: "-",
+        content: "-",
         resume: "No data available for this company.",
       });
     } else {
@@ -59,8 +59,8 @@ export const exportCompanyReport = async (
         if (!dept.job || dept.job.length === 0) {
           worksheet.addRow({
             department: dept.name,
-            title: "-",
             description: "-",
+            content: "-",
             resume: "-",
           });
           continue;
@@ -70,8 +70,8 @@ export const exportCompanyReport = async (
           if (!job.Application || job.Application.length === 0) {
             worksheet.addRow({
               department: dept.name,
-              title: job.title,
               description: job.description,
+              content: job.content,
               resume: "-",
             });
             continue;
@@ -85,8 +85,8 @@ export const exportCompanyReport = async (
 
             worksheet.addRow({
               department: dept.name,
-              title: job.title,
               description: job.description,
+              content: job.content,
               resume: application.resumeUrl
                 ? { text: "Download Resume", hyperlink: resumeFullUrl }
                 : "-",
@@ -153,12 +153,16 @@ export const exportGlobalReports = async (
     const workbook = new ExcelJS.Workbook();
 
     for (const company of companies) {
-      const worksheet = workbook.addWorksheet(company.name.slice(0, 31));
+      const safeSheetName =
+        company.name.replace(/[\\\/\?\*\[\]\:]/g, "").slice(0, 28) +
+        "_" +
+        company.id.slice(0, 3);
+      const worksheet = workbook.addWorksheet(safeSheetName);
 
       worksheet.columns = [
         { header: "Department Name", key: "department", width: 30 },
-        { header: "Job Title", key: "title", width: 30 },
         { header: "Job Description", key: "description", width: 50 },
+        { header: "Job Content", key: "content", width: 30 },
         { header: "Resume URL", key: "resume", width: 50 },
       ];
 
@@ -166,8 +170,8 @@ export const exportGlobalReports = async (
         if (!dept.job || dept.job.length === 0) {
           worksheet.addRow({
             department: dept.name,
-            title: "-",
             description: "-",
+            content: "-",
             resume: "-",
           });
         } else {
@@ -175,8 +179,8 @@ export const exportGlobalReports = async (
             if (!job.Application || job.Application.length === 0) {
               worksheet.addRow({
                 department: dept.name,
-                title: job.title,
                 description: job.description,
+                content: job.content,
                 resume: "-",
               });
             } else {
@@ -189,8 +193,8 @@ export const exportGlobalReports = async (
 
                   worksheet.addRow({
                     department: dept.name,
-                    title: job.title,
                     description: job.description,
+                    content: job.content,
                     resume: {
                       text: "Download Resume",
                       hyperlink: resumeFullUrl,
@@ -203,7 +207,7 @@ export const exportGlobalReports = async (
         }
       }
     }
-
+    
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

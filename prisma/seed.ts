@@ -116,16 +116,16 @@ async function main() {
   console.log(`✅ Linked all permissions to Admin Group.`);
 
   // 5️⃣ Create Super Admin User
-  const hashedPassword = await hashPassword("Saeed123");
+  const hashedPassword = await hashPassword("password");
 
   const superAdmin = await prisma.user.upsert({
     where: { email: "shaikhmuhid165@gmail.com" },
     update: {},
     create: {
       fullName: "Saeed Lanjekar",
-      email: "saeed.lanjekar@gmail.com",
+      email: "shaikhmuhid165@gmail.com",
       password: hashedPassword,
-      phone: "8655587403",
+      phone: "9594331924",
       roleId: superAdminRole.id,
     },
   });

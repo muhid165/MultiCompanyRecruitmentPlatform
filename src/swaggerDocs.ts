@@ -1174,129 +1174,6 @@
 
 /**
  * @swagger
- * /api/job:
- *   get:
- *     summary: Get all jobs for a specific company
- *     description: Retrieve a paginated list of all non-deleted jobs belonging to a specific company. Requires `view_company_job` permission.
- *     tags:
- *       - Company - Jobs
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: companyId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the company whose jobs are being fetched.
- *       - in: query
- *         name: page
- *         required: false
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number for pagination.
- *       - in: query
- *         name: limit
- *         required: false
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of jobs to return per page.
- *     responses:
- *       200:
- *         description: Successfully retrieved company jobs.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 page:
- *                   type: integer
- *                   example: 1
- *                 totalPages:
- *                   type: integer
- *                   example: 5
- *                 totalItems:
- *                   type: integer
- *                   example: 42
- *                 jobs:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       companyId:
- *                         type: string
- *                         example: "6710b32f7f62bca2dcb12e94"
- *                       departmentId:
- *                         type: string
- *                         example: "6710b3f27f62bca2dcb12f02"
- *                       title:
- *                         type: string
- *                         example: "Software Engineer"
- *                       location:
- *                         type: string
- *                         example: "Mumbai"
- *                       experience:
- *                         type: string
- *                         example: "2+ years"
- *                       salaryRange:
- *                         type: string
- *                         example: "6–10 LPA"
- *                       employmentType:
- *                         type: string
- *                         example: "Full-time"
- *                       description:
- *                         type: string
- *                         example: "Responsible for developing and maintaining backend APIs."
- *                       responsibilities:
- *                         type: string
- *                         example: "Build scalable backend services using Node.js and Express."
- *                       requirements:
- *                         type: string
- *                         example: "Experience with REST APIs, SQL/NoSQL databases."
- *                       CreatedBy:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             example: "6710c945efb2a2d1f2c5e91a"
- *                       published:
- *                         type: boolean
- *                         example: true
- *                       status:
- *                         type: string
- *                         example: "ACTIVE"
- *                       createdAt:
- *                         type: string
- *                         format: date-time
- *                         example: "2025-10-17T10:15:00.000Z"
- *                       updatedAt:
- *                         type: string
- *                         format: date-time
- *                         example: "2025-10-17T10:45:00.000Z"
- *       400:
- *         description: Missing or invalid companyId.
- *       404:
- *         description: No jobs found for the given company.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: No Job found
- *       401:
- *         description: Unauthorized – Missing or invalid token.
- *       403:
- *         description: Forbidden – Missing `view_company_job` permission.
- *       500:
- *         description: Internal server error.
- */
-
-/**
- * @swagger
  * /api/job/published:
  *   get:
  *     summary: Get all Published jobs for a specific company
@@ -2561,6 +2438,13 @@
  *       - bearerAuth: []
  *     parameters:
  *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           default: ADMIN
+ *         required: false
+ *         description: Role name for filtering
+ *       - in: query
  *         name: page
  *         schema:
  *           type: integer
@@ -2821,7 +2705,7 @@
 
 /**
  * @swagger
- * /api/application:
+ * /api/applicationnn:
  *   get:
  *     summary: Get all applications of a company (paginated)
  *     description: Retrieves all non-deleted applications for a specific company with pagination support. Open API.
@@ -4028,3 +3912,281 @@
  *           type: string
  *           format: date-time
  */
+
+
+
+/**
+ * @swagger
+ * /api/job/:
+ *   get:
+ *     summary: View and filter company jobs
+ *     description: Retrieve a paginated list of jobs for a specific company. Supports filtering by department name, employment type, published status, and job status.
+ *     tags:
+ *       - Company - Jobs
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the company whose jobs you want to view.
+ *       - in: query
+ *         name: Department.name
+ *         schema:
+ *           type: string
+ *         description: Filter by department name (case-insensitive partial match).
+ *       - in: query
+ *         name: employmentType
+ *         schema:
+ *           type: string
+ *           enum: [FULL_TIME, CONTRACT, INTERNSHIP]
+ *         description: Filter by employment type.
+ *       - in: query
+ *         name: published
+ *         schema:
+ *           type: boolean
+ *         description: Filter by published status (true or false).
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, ACTIVE, CLOSED]
+ *         description: Filter by job status.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of records per page.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved job list.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 5
+ *                 totalItems:
+ *                   type: integer
+ *                   example: 47
+ *                 jobs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "b23a1bcd-7c11-4fa4-82c5-efb7a5b3d123"
+ *                       companyId:
+ *                         type: string
+ *                         example: "f6712b87-182f-4c23-a983-882fa8231b41"
+ *                       Department:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             example: "d9a77f53-1d72-4ab4-b281-3fd1cfa2d1cc"
+ *                           name:
+ *                             type: string
+ *                             example: "Engineering"
+ *                       title:
+ *                         type: string
+ *                         example: "Backend Developer"
+ *                       location:
+ *                         type: string
+ *                         example: "Mumbai"
+ *                       experience:
+ *                         type: string
+ *                         example: "2-4 years"
+ *                       salaryRange:
+ *                         type: string
+ *                         example: "6 LPA - 10 LPA"
+ *                       employmentType:
+ *                         type: string
+ *                         example: "FULL_TIME"
+ *                       description:
+ *                         type: string
+ *                         example: "Responsible for backend development using Node.js and PostgreSQL."
+ *                       responsibilities:
+ *                         type: string
+ *                         example: "Develop APIs, manage databases, ensure scalability."
+ *                       requirements:
+ *                         type: string
+ *                         example: "Experience with Express.js, Prisma, and PostgreSQL."
+ *                       published:
+ *                         type: boolean
+ *                         example: true
+ *                       status:
+ *                         type: string
+ *                         example: "ACTIVE"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-30T14:32:00.000Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-31T09:45:00.000Z"
+ *       404:
+ *         description: No jobs found for the given filters.
+ *       500:
+ *         description: Internal server error.
+ */
+
+
+
+/**
+ * @swagger
+ * /api/application:
+ *   get:
+ *     summary: View and filter company applications
+ *     description: Retrieve a paginated list of applications for a specific company. Supports filtering by application status.
+ *     tags:
+ *       - Company - Applications
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the company whose applications you want to view.
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [APPLIED, SHORTLISTED, INTERVIEW, OFFERED, HIRED, REJECTED]
+ *         description: Filter applications by status.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of records per page.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved applications.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Applications fetched successfully"
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 3
+ *                 totalItems:
+ *                   type: integer
+ *                   example: 25
+ *                 applications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: "3b12f2a4-32a9-4b93-b98e-542a8f4d2410"
+ *                       companyId:
+ *                         type: string
+ *                         example: "f6712b87-182f-4c23-a983-882fa8231b41"
+ *                       jobId:
+ *                         type: string
+ *                         example: "b23a1bcd-7c11-4fa4-82c5-efb7a5b3d123"
+ *                       candidateName:
+ *                         type: string
+ *                         example: "Abdul Mueed"
+ *                       email:
+ *                         type: string
+ *                         example: "abdulmueed@example.com"
+ *                       phone:
+ *                         type: string
+ *                         example: "+91 9876543210"
+ *                       resumeUrl:
+ *                         type: string
+ *                         example: "https://example.com/resume.pdf"
+ *                       experience:
+ *                         type: object
+ *                         example: { years: 2, domain: "Backend Development" }
+ *                       skills:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                         example: ["Node.js", "Express", "PostgreSQL"]
+ *                       currentCTC:
+ *                         type: string
+ *                         example: "6 LPA"
+ *                       expectedCTC:
+ *                         type: string
+ *                         example: "8 LPA"
+ *                       noticePeriod:
+ *                         type: string
+ *                         example: "30 days"
+ *                       status:
+ *                         type: string
+ *                         example: "INTERVIEW"
+ *                       source:
+ *                         type: string
+ *                         example: "LinkedIn"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-29T14:32:00.000Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-10-30T10:15:00.000Z"
+ *                       Notes:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             userId:
+ *                               type: string
+ *                               example: "b24f2c8d-7a11-4fa4-82c5-efb7a5b3d167"
+ *                             note:
+ *                               type: string
+ *                               example: "Candidate performed well in interview."
+ *                       History:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             oldStatus:
+ *                               type: string
+ *                               example: "APPLIED"
+ *                             newStatus:
+ *                               type: string
+ *                               example: "INTERVIEW"
+ *                             changeById:
+ *                               type: string
+ *                               example: "u12a3c4b-5d6e-7f8g-9h0i-1j2k3l4m5n6o"
+ *       400:
+ *         description: Missing or invalid companyId.
+ *       404:
+ *         description: No applications found for the given company or filters.
+ *       500:
+ *         description: Internal server error.
+ */
+

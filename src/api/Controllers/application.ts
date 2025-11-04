@@ -2,7 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
 import { sendApplicationMail } from "../../Services/mail";
 import { logActivity } from "../../Utils/activityLog";
-import { ActivityLogType, EntityType } from "@prisma/client";
+import { ActivityLogType, Application, EntityType } from "@prisma/client";
+import { filterData } from "../../Utils/filterData";
+import { normalizeQuery } from "../../Utils/normalizeQuery";
+import { buildPrismaFilters } from "../../Utils/buildPrismaFilters";
 
 //APPLICATION   // updated this controller to get companyID from the token
 export const viewCreateApplication = async (
@@ -10,8 +13,7 @@ export const viewCreateApplication = async (
   res: Response,
   next: NextFunction
 ) => {
-  
-  const companyId  = req.query.companyId;
+  const companyId = req.query.companyId;
 
   if (!companyId || typeof companyId !== "string") {
     return res.status(400).json({ message: "Missing or invalid companyId." });
@@ -77,10 +79,71 @@ export const viewCreateApplication = async (
       data: newApplication,
     });
   } catch (error) {
-    console.log("Error",error)
+    console.log("Error", error);
     next(error);
   }
 };
+
+// export const viewCompanyApplications = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { companyId } = req.query;
+//     const page = parseInt(req.query.page as string) || 1;
+//     const limit = parseInt(req.query.limit as string) || 10;
+//     const skip = (page - 1) * limit;
+
+//     if (!companyId || typeof companyId !== "string") {
+//       return res.status(400).json({ message: "Missing or invalid companyId." });
+//     }
+
+//     const [applications, total] = await Promise.all([
+//       prisma.application.findMany({
+//         where: {
+//           companyId,
+//           isDeleted: false,
+//         },
+//         include: {
+//           Notes: {
+//             select: {
+//               userId: true,
+//               note: true,
+//             },
+//           },
+//           History: {
+//             select: {
+//               oldStatus: true,
+//               newStatus: true,
+//               changeById: true,
+//             },
+//           },
+//         },
+//         orderBy: { createdAt: "desc" },
+//         skip,
+//         take: limit,
+//       }),
+//       prisma.application.count({
+//         where: { companyId, isDeleted: false },
+//       }),
+//     ]);
+//     if (total === 0)
+//       return res.status(404).json({
+//         message: "No Applications found for this company",
+//       });
+
+//     return res.status(200).json({
+//       message: " Applications fetched successfully",
+//       page,
+//       totalPages: Math.ceil(total / limit),
+//       totalItems: total,
+//       applications,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
 
 export const viewCompanyApplications = async (
   req: Request,
@@ -88,21 +151,38 @@ export const viewCompanyApplications = async (
   next: NextFunction
 ) => {
   try {
-    const { companyId } = req.query;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    if (!companyId || typeof companyId !== "string") {
+    const schemaFields = {
+      companyId: { type: "string" as const },
+      status: {
+        type: "enum" as const,
+        enumValues: [
+          "APPLIED",
+          "SHORTLISTED",
+          "INTERVIEW",
+          "OFFERED",
+          "HIRED",
+          "REJECTED",
+        ],
+      },
+    };
+
+    const normalized = normalizeQuery(req.query);
+
+    if (!normalized.companyId || typeof normalized.companyId !== "string") {
       return res.status(400).json({ message: "Missing or invalid companyId." });
     }
 
+    const filters: any = buildPrismaFilters(normalized, schemaFields);
+
+    filters.isDeleted = false;
+
     const [applications, total] = await Promise.all([
       prisma.application.findMany({
-        where: {
-          companyId,
-          isDeleted: false,
-        },
+        where: filters,
         include: {
           Notes: {
             select: {
@@ -122,17 +202,16 @@ export const viewCompanyApplications = async (
         skip,
         take: limit,
       }),
-      prisma.application.count({
-        where: { companyId, isDeleted: false },
-      }),
+      prisma.application.count({ where: filters }),
     ]);
+
     if (total === 0)
       return res.status(404).json({
         message: "No Applications found for this company",
       });
 
     return res.status(200).json({
-      message: " Applications fetched successfully",
+      message: "Applications fetched successfully",
       page,
       totalPages: Math.ceil(total / limit),
       totalItems: total,
@@ -270,56 +349,7 @@ export const viewUpdateApplication = async (
   }
 };
 
-// export const viewChangeApplicationStatus = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     const applicationId = req.params.id; // application ID
-//     const userId = (req as any).user?.id;
-//     const { status } = req.body;
-
-//     const application = await prisma.application.findUnique({
-//       where: { id: applicationId },
-//     });
-//     if (!application) throw new Error("No application found");
-
-//     const [updatedApplication, historyEntry] = await prisma.$transaction([
-//       prisma.application.update({
-//         where: { id: applicationId },
-//         data: { status },
-//         select: { id: true, status: true },
-//       }),
-//       prisma.applicationHistory.create({
-//         data: {
-//           applicationId,
-//           oldStatus: application.status,
-//           newStatus: status,
-//           changeById: userId,
-//         },
-//       }),
-//     ]);
-
-//     await logActivity({
-//       userId: userId,
-//       action: ActivityLogType.UPDATED,
-//       entityType: EntityType.APPLICATION,
-//       entityId: applicationId,
-//       description: `Application status changed from ${application.status} to ${status}.`,
-//       changes: { applicationId: applicationId, status: status },
-//     });
-
-//     return res
-//       .status(200)
-//       .json({ message: "Application status changed successfully " });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
 //APPLICATION HISTORY
-
 export const viewApplicationHistory = async (
   req: Request,
   res: Response,
@@ -367,19 +397,50 @@ export const viewCreateApplicationNote = async (
         userId,
         note,
       },
+      include: { User: true },
     });
 
     await logActivity({
       userId: userId,
       action: ActivityLogType.CREATED,
-      entityType: EntityType.APPLICATION,
+      entityType: EntityType.APPLICATION_NOTE,
       entityId: applicationId,
       description: `application note created`,
       changes: { applicationId: applicationId, note: note },
     });
     return res
       .status(200)
-      .json({ message: "Note created successfully", applicatioNote });
+      .json({ message: "Note created successfully", data: applicatioNote });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const viewUpdateApplicationNote = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const noteId = req.params.id;
+    const { note } = req.body;
+
+    console.log("this is the note ID", req.params);
+    console.log("this is the note", req.body);
+
+    const updatednote = await prisma.applicationNote.update({
+      where: {
+        id: noteId,
+      },
+      data: {
+        note: note,
+      },
+      select: { note: true, createdAt: true, updatedAt: true, User: true },
+    });
+
+    return res
+      .status(200)
+      .json({ message: "Note updated successfully", data: updatednote });
   } catch (error) {
     next(error);
   }
@@ -404,6 +465,7 @@ export const deleteApplicationNote = async (
       },
       data: {
         isDeleted: true,
+        deletedAt: new Date(),
       },
     });
 
@@ -430,15 +492,15 @@ export const viewApplicationNotes = async (
   try {
     const applicationId = req.params.id;
 
-    if (!applicationId || typeof applicationId !== "string") {
-      return res
-        .status(400)
-        .json({ message: "Invalid or missing application ID." });
-    }
-
     const notes = await prisma.applicationNote.findMany({
-      select: { userId: true, note: true, createdAt: true },
-      where: { applicationId: applicationId, isDeleted: false },
+      select: {
+        id: true,
+        note: true,
+        createdAt: true,
+        updatedAt: true,
+        User: true,
+      },
+      where: { applicationId, isDeleted: false },
       orderBy: { createdAt: "desc" },
     });
 

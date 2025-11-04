@@ -15,8 +15,8 @@ import { bulkDeleteSchema, departmentSchema } from "../../Validators/validations
 const router = Router();
 
 //DEPARTMENTS
-router.get("/filter", isAuthenticated, hasPermission("view_company_department"), viewDepartments);
 router.get("/search", isAuthenticated, hasPermission("view_company_department"), viewSearchDepartments);
+router.get("/filter", isAuthenticated, hasPermission("view_company_department"), viewDepartments);
 router.get("/", isAuthenticated, hasPermission("view_company_department"), viewCompanyDepartments);
 router.post("/", isAuthenticated, hasPermission("add_company_department"), validate(departmentSchema), viewCreateDepartment);
 router.put("/:id", isAuthenticated, hasPermission("edit_company_department"), validate(departmentSchema), viewUpdateDepartment);

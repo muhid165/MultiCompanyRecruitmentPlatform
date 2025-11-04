@@ -1,9 +1,60 @@
 import { Request, Response, NextFunction } from "express";
 import prisma from "../../Config/prisma";
 import { logActivity } from "../../Utils/activityLog";
-import { ActivityLogType, EntityType } from "@prisma/client";
+import { ActivityLogType, EntityType, Role } from "@prisma/client";
+import { filterData } from "../../Utils/filterData";
+import { normalizeQuery } from "../../Utils/normalizeQuery";
+import { buildPrismaFilters } from "../../Utils/buildPrismaFilters";
 
 //USER MANAGEMENT ACCROSS COMPANIES  // 1 controller remaining
+// export const viewAllUsers = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const page = parseInt(req.query.page as string) || 1;
+//     const limit = parseInt(req.query.limit as string) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const users = await prisma.user.findMany({
+//       select: {
+//         id: true,
+//         fullName: true,
+//         email: true,
+//         phone: true,
+//         companyId: true,
+//         Role: {
+//           select: {
+//             code: true,
+//           },
+//         },
+//       },
+//       where: {
+//         isDeleted: false,
+//       },
+//       skip,
+//       take: limit,
+//       orderBy: { fullName: "asc" },
+//     });
+
+//     const total = await prisma.user.count({ where: { isDeleted: false } });
+//     if (total <= 0)
+//       return res.status(404).json({
+//         message: "No Users found",
+//       });
+
+//     return res.status(200).json({
+//       page,
+//       tatalPages: Math.ceil(total / limit),
+//       totalItems: total,
+//       users,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 export const viewAllUsers = async (
   req: Request,
   res: Response,
@@ -13,6 +64,31 @@ export const viewAllUsers = async (
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
+
+    const schemaFields = {
+      fullName: { type: "string" as const },
+      email: { type: "string" as const },
+      phone: { type: "string" as const },
+      companyId: { type: "string" as const },
+      // role: { type: "string" as const }, // we'll handle this separately
+    };
+
+    const normalized = normalizeQuery(req.query);
+    const filters: any = buildPrismaFilters(normalized, schemaFields);
+
+    const where: any = {
+      isDeleted: false,
+      ...filters,
+    };
+
+    if (normalized.role) {
+      where.Role = {
+        OR: [
+          { name: { contains: normalized.role, mode: "insensitive" } },
+          { code: { contains: normalized.role, mode: "insensitive" } },
+        ],
+      };
+    }
 
     const users = await prisma.user.findMany({
       select: {
@@ -24,26 +100,26 @@ export const viewAllUsers = async (
         Role: {
           select: {
             code: true,
+            name: true,
           },
         },
       },
-      where: {
-        isDeleted: false,
-      },
+      where,
       skip,
       take: limit,
-      orderBy:{ fullName:'asc'}
+      orderBy: { fullName: "asc" },
     });
 
-    const total = await prisma.user.count({ where: { isDeleted: false } });
+    const total = await prisma.user.count({ where });
+
     if (total <= 0)
       return res.status(404).json({
-        message: "No Users found",
+        message: "No users found.",
       });
 
     return res.status(200).json({
       page,
-      tatalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
       users,
     });
@@ -51,6 +127,7 @@ export const viewAllUsers = async (
     next(error);
   }
 };
+
 export const viewUserById = async (
   req: Request,
   res: Response,
@@ -68,7 +145,8 @@ export const viewUserById = async (
         companyId: true,
         Role: {
           select: {
-            code: true,
+            id: true,
+            name: true,
           },
         },
       },
@@ -78,7 +156,7 @@ export const viewUserById = async (
       },
     });
 
-    if (!user) throw new Error("No user found with ID");
+    if (!user) return res.status(404).json({ message: "No user found with this ID" });
 
     return res.status(200).json({ user });
   } catch (error) {
@@ -280,10 +358,49 @@ export const viewDeleteBulkUsers = async (
       });
     }
 
-    return res
-      .status(200)
-      .json({ message: "Users Deleted successfully" });
+    return res.status(200).json({ message: "Users Deleted successfully" });
   } catch (err) {
     next(err);
+  }
+};
+
+// Note: This actually filters Roles for dropdowns, not users
+export const viewFilterUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  try {
+    const { name } = req.query as {
+      name?: string;
+    };
+
+    const result = (await filterData({
+      model: prisma.role,
+      query: { ...req.query },
+    })) as { data: Role[] };
+
+    let responseData: any[] = [];
+
+    if (name) {
+      for (const role of result.data) {
+        responseData.push({
+          id: role.id,
+          name: role.name,
+        });
+      }
+    } else {
+      responseData = result.data.map((role) => ({
+        id: role.id,
+        name: role.name,
+      }));
+    }
+
+    return res.status(200).json({
+      message: "Filter Roles fetched successfully",
+      data: responseData,
+    });
+  } catch (error) {
+    next(error);
   }
 };

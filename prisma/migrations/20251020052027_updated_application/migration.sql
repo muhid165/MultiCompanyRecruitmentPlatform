@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Application" ALTER COLUMN "currentCTC" SET DATA TYPE TEXT,
-ALTER COLUMN "expectedCTC" SET DATA TYPE TEXT;

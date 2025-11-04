@@ -145,7 +145,7 @@ export const deleteDepartmentById = async (
       },
       data: {
         isDeleted: true,
-        deletedAt: new Date()
+        deletedAt: new Date(),
       },
     });
 
@@ -176,27 +176,16 @@ export const viewDepartments = async (
 
     const result = (await filterData({
       model: prisma.department,
-      query:{ ...req.query, isDeleted: false},
-    })) as Department[];
-   
-    let responseData: Partial<Department>[] = [];
+      query: { ...req.query, isDeleted: false },
+      defaultSortBy: "name",
+      defaultOrder: "asc",
+    })) as { data: Department[] };
 
-    if (companyId && !name) {
-      // Only companyId present → return department names only
-      responseData = result.map((dept) => ({
-        id: dept.id,
-        name: dept.name,
-      }));
-    } else if (companyId && name) {
-      // Both companyId and name present → return id + name
-      responseData = result.map((dept) => ({
-        id: dept.id,
-        name: dept.name,
-      }));
-    } else {
-      // Default fallback if nothing passed
-      responseData = result;
-    }
+    // let responseData: Partial<Department>[] = [];
+    const responseData = result.data.map((dept: Department) => ({
+      id: dept.id,
+      name: dept.name,
+    }));
 
     return res.status(200).json({
       message: "Filtered departments fetched successfully",
